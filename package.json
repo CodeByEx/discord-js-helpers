@@ -1,0 +1,65 @@
+{
+  "name": "easier-djs",
+  "version": "0.1.0",
+  "description": "Drop-in Discord.js helpers: zero-config client setup, V2 cards, deploy tools, UX primitives. TypeScript-first with JS-friendly JSDoc.",
+  "author": "Your Name",
+  "license": "MIT",
+  "keywords": ["discord", "discord.js", "bot", "typescript", "javascript", "v2", "components"],
+  "homepage": "https://github.com/CodeByEx/easier-djs#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CodeByEx/easier-djs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CodeByEx/easier-djs/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "peerDependencies": {
+    "discord.js": "^14.19.0 || ^14.20.0 || ^14.x"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "discord.js": "^14.20.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.2.0",
+    "eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "prettier": "^3.2.0"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rmdir /s /q dist 2>nul || echo Clean completed",
+    "prebuild": "npm run clean",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build && npm run test:run && npm run lint && npm run typecheck",
+    "postversion": "git push --follow-tags"
+  },
+  "sideEffects": false
+} 
