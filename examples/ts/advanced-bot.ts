@@ -1,7 +1,8 @@
 import { 
   createClient, 
   deploy, 
-  card, 
+  msg, 
+  embed, 
   btn, 
   createCommandHandler, 
   createPrefixCommandHandler,
@@ -9,9 +10,9 @@ import {
   awaitModal,
   memoryCache,
   wrapRest
-} from 'easier-djs';
+} from 'discord-js-helpers';
 import { SlashCommandBuilder, ActionRowBuilder, REST } from 'discord.js';
-import type { CommandDefinition, PrefixCommandDefinition } from 'easier-djs';
+import type { CommandDefinition, PrefixCommandDefinition } from 'discord-js-helpers';
 
 // Create client with all features enabled
 const client = createClient({ 
@@ -40,13 +41,14 @@ const commands: CommandDefinition[] = [
         // Store in cache
         await cache.set(`report:${Date.now()}`, data, 3600); // 1 hour TTL
         
-        const ui = card()
+        const ui = embed()
           .color(0xff0000)
-          .section(`🚨 **Report Submitted**\n\n**User:** ${data.user}\n**Reason:** ${data.reason}`)
+          .title('🚨 **Report Submitted**')
+          .description(`**User:** ${data.user}\n**Reason:** ${data.reason}`)
           .footer('Report will be reviewed by moderators');
         
         await interaction.followUp({ content: 'Report submitted successfully!', ephemeral: true });
-        const response = ui.withActions();
+        const response = ui.buttons(btn.primary('Close', 'close')).build();
         if (interaction.channel?.isTextBased() && 'send' in interaction.channel) {
           await (interaction.channel as any).send({ 
             components: response.components,
@@ -70,12 +72,13 @@ const commands: CommandDefinition[] = [
       await cache.set(key, value, 300); // 5 minutes TTL
       const retrieved = await cache.get(key);
       
-      const ui = card()
+      const ui = embed()
         .color(0x00ff00)
-        .section(`💾 **Cache Test**\n\n**Stored:** ${JSON.stringify(value)}\n**Retrieved:** ${JSON.stringify(retrieved)}`)
+        .title('💾 **Cache Test**')
+        .description(`**Stored:** ${JSON.stringify(value)}\n**Retrieved:** ${JSON.stringify(retrieved)}`)
         .footer('Cache test completed');
       
-      const response = ui.withActions();
+      const response = ui.buttons(btn.primary('Close', 'close')).build();
       await interaction.reply({ 
         components: response.components,
         flags: response.flags as any
@@ -121,12 +124,12 @@ const prefixCommands: PrefixCommandDefinition[] = [
         .map(cmd => `**${cmd.name}**${cmd.aliases ? ` (${cmd.aliases.join(', ')})` : ''} - ${cmd.description || 'No description'}`)
         .join('\n');
       
-      const ui = card()
+      const ui = embed()
         .color(0x0099ff)
-        .section(`📚 **Available Commands**\n\n${commandList}`)
-        .footer('Use !help <command> for more info');
+        .title('📚 **Available Commands**')
+        .description(`${commandList}\n\nUse !help <command> for more info`);
       
-      const response = ui.withActions();
+      const response = ui.buttons(btn.primary('Close', 'close')).build();
       await message.reply({ 
         components: response.components,
         flags: response.flags as any
@@ -149,7 +152,7 @@ const enhancedRest = wrapRest(rest, {
 // Deploy commands and start bot
 async function main() {
   try {
-    console.log('🚀 Starting advanced easier-djs example bot...');
+    console.log('🚀 Starting advanced discord-js-helpers example bot...');
     
     // Deploy slash commands
     await deploy(client, commands, {

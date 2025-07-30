@@ -1,4 +1,4 @@
-const { createClient, deploy, card, btn, createCommandHandler } = require('easier-djs');
+const { createClient, deploy, card, btn, createCommandHandler } = require('discord-js-helpers');
 const { SlashCommandBuilder, ActionRowBuilder } = require('discord.js');
 
 // Create client with automatic intent configuration
@@ -78,7 +78,7 @@ client.on('interactionCreate', async (interaction) => {
 // Deploy commands and start bot
 async function main() {
   try {
-    console.log('🚀 Starting easier-djs example bot...');
+    console.log('🚀 Starting discord-js-helpers example bot...');
     
     // Deploy commands (use guild for development, global for production)
     await deploy(client, commands, {

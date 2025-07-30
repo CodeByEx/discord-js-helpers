@@ -1,8 +1,8 @@
-import { GatewayIntentBits, Client, REST, Routes, ComponentType, MessageFlags, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
+import { GatewayIntentBits, Client, REST, Routes, TextInputStyle, ModalBuilder, TextInputBuilder, ActionRowBuilder, ContainerBuilder, TextDisplayBuilder, MessageFlags, ButtonBuilder, ButtonStyle, ChannelSelectMenuBuilder, RoleSelectMenuBuilder, UserSelectMenuBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ComponentType, ShardingManager } from 'discord.js';
 import { readdir, stat } from 'fs/promises';
 import { join, extname } from 'path';
 
-// easier-djs - Discord.js helpers with zero config
+// discord-js-helpers - Discord.js helpers with zero config
 
 var FEATURE_INTENTS = {
   commands: [],
@@ -48,7 +48,7 @@ function createClient(options = {}) {
 async function diagnose(client) {
   const logger = client.__easierDjsLogger || createDefaultLogger();
   const features = client.__easierDjsFeatures || [];
-  logger.info("\u{1F50D} Running easier-djs diagnostics...");
+  logger.info("\u{1F50D} Running discord-js-helpers diagnostics...");
   if (!client.isReady()) {
     logger.warn("\u26A0\uFE0F  Client is not ready yet. Some checks may be incomplete.");
   }
@@ -74,7 +74,7 @@ async function diagnose(client) {
   if (majorVersion >= 18) {
     logger.info(`\u2705 Node.js ${nodeVersion} (supported)`);
   } else {
-    logger.error(`\u274C Node.js ${nodeVersion} is too old. easier-djs requires Node.js 18.17+`);
+    logger.error(`\u274C Node.js ${nodeVersion} is too old. discord-js-helpers requires Node.js 18.17+`);
   }
   logger.info("\u{1F3AF} Diagnostics complete!");
 }
@@ -307,55 +307,310 @@ function createPrefixCommandHandler(prefixCommands, prefix = "!", logger) {
     }
   };
 }
-function card() {
-  return new CardBuilderImpl();
+function msg() {
+  return new SimpleMessageImpl();
 }
-var CardBuilderImpl = class {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _color;
-  _sections = [];
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _thumbUrl;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _imageUrl;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _footerText;
+function embed() {
+  return new SimpleEmbedImpl();
+}
+var modalV2 = {
+  create(id, title, inputs) {
+    const modal2 = new ModalBuilder().setCustomId(id).setTitle(title);
+    inputs.forEach((input) => {
+      const textInput = new TextInputBuilder().setCustomId(input.id).setLabel(input.label).setStyle(input.style || TextInputStyle.Short).setRequired(input.required !== false);
+      if (input.placeholder) {
+        textInput.setPlaceholder(input.placeholder);
+      }
+      if (input.minLength !== void 0) {
+        textInput.setMinLength(input.minLength);
+      }
+      if (input.maxLength !== void 0) {
+        textInput.setMaxLength(input.maxLength);
+      }
+      if (input.value) {
+        textInput.setValue(input.value);
+      }
+      const actionRow = new ActionRowBuilder().addComponents(textInput);
+      modal2.addComponents(actionRow);
+    });
+    return modal2;
+  },
+  contact(id) {
+    return this.create(id, "Contact Form", [
+      { id: "name", label: "Name", placeholder: "Enter your name", required: true },
+      { id: "email", label: "Email", placeholder: "Enter your email", required: true },
+      { id: "subject", label: "Subject", placeholder: "What is this about?", required: true },
+      { id: "message", label: "Message", placeholder: "Tell us more...", required: true, style: TextInputStyle.Paragraph }
+    ]);
+  },
+  feedback(id) {
+    return this.create(id, "Feedback Form", [
+      { id: "rating", label: "Rating (1-10)", placeholder: "Rate your experience", required: true },
+      { id: "feedback", label: "Feedback", placeholder: "Share your thoughts...", required: true, style: TextInputStyle.Paragraph },
+      { id: "suggestions", label: "Suggestions", placeholder: "Any suggestions for improvement?", style: TextInputStyle.Paragraph }
+    ]);
+  },
+  settings(id, fields) {
+    const inputs = fields.map((field) => ({
+      id: field.toLowerCase().replace(/\s+/g, "_"),
+      label: field,
+      placeholder: `Enter ${field.toLowerCase()}`,
+      required: true
+    }));
+    return this.create(id, "Settings", inputs);
+  }
+};
+function createPagination(options) {
+  const { items, itemsPerPage, currentPage = 1, showPageInfo = true, showNavigation = true } = options;
+  const totalPages = Math.ceil(items.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = items.slice(startIndex, endIndex);
+  const message = msg();
+  if (showPageInfo) {
+    message.text(`**Page ${currentPage} of ${totalPages}**`);
+    message.text(`Showing ${startIndex + 1}-${Math.min(endIndex, items.length)} of ${items.length} items`);
+    message.separator();
+  }
+  currentItems.forEach((item, index) => {
+    if (typeof item === "string") {
+      message.text(item);
+    } else if (item.title && item.description) {
+      message.title(item.title);
+      message.text(item.description);
+    } else {
+      message.text(JSON.stringify(item));
+    }
+  });
+  if (showNavigation && totalPages > 1) {
+    const buttons = [];
+    if (currentPage > 1) {
+      buttons.push(btn.primary("page_first", "\u23EE\uFE0F First"));
+      buttons.push(btn.secondary("page_prev", "\u25C0\uFE0F Previous"));
+    }
+    if (currentPage < totalPages) {
+      buttons.push(btn.secondary("page_next", "Next \u25B6\uFE0F"));
+      buttons.push(btn.primary("page_last", "Last \u23ED\uFE0F"));
+    }
+    if (buttons.length > 0) {
+      message.buttons(...buttons);
+    }
+  }
+  return message.build();
+}
+function createForm(fields) {
+  return modalV2.create("form_" + Date.now(), "Form", fields);
+}
+var SimpleMessageImpl = class {
+  textComponents = [];
+  actionComponents = [];
+  messageColor;
+  hasContent = false;
+  text(content) {
+    this.textComponents.push(content);
+    this.hasContent = true;
+    return this;
+  }
+  title(text) {
+    this.textComponents.push(`**${text}**`);
+    this.hasContent = true;
+    return this;
+  }
+  subtitle(text) {
+    this.textComponents.push(`*${text}*`);
+    this.hasContent = true;
+    return this;
+  }
+  separator() {
+    this.textComponents.push("---");
+    return this;
+  }
+  smallSeparator() {
+    this.textComponents.push("---");
+    return this;
+  }
+  image(url, alt) {
+    this.textComponents.push(`![${alt || "Image"}](${url})`);
+    return this;
+  }
+  images(urls) {
+    const imageText = urls.map((url) => `![Image](${url})`).join("\n");
+    this.textComponents.push(imageText);
+    return this;
+  }
+  mediaGallery(urls) {
+    const galleryText = urls.map((url) => `![Gallery Image](${url})`).join("\n");
+    this.textComponents.push(galleryText);
+    return this;
+  }
+  thumbnail(url, alt) {
+    this.textComponents.push(`![${alt || "Thumbnail"}](${url})`);
+    return this;
+  }
+  field(name, value, inline = false) {
+    const fieldText = inline ? `**${name}** ${value}` : `**${name}**
+${value}`;
+    this.textComponents.push(fieldText);
+    this.hasContent = true;
+    return this;
+  }
   color(hex) {
-    this._color = hex;
+    this.messageColor = hex;
     return this;
   }
-  section(md) {
-    this._sections.push(md);
+  footer(text) {
+    this.textComponents.push(`*${text}*`);
+    this.hasContent = true;
     return this;
   }
-  thumb(url) {
-    this._thumbUrl = url;
+  buttons(...buttons) {
+    const row = new ActionRowBuilder();
+    buttons.forEach((button) => row.addComponents(button));
+    this.actionComponents.push(row.toJSON());
+    return this;
+  }
+  select(menu) {
+    const row = new ActionRowBuilder();
+    row.addComponents(menu);
+    this.actionComponents.push(row.toJSON());
+    return this;
+  }
+  build() {
+    const components = [];
+    if (!this.hasContent) {
+      this.textComponents.unshift(" ");
+    }
+    if (this.textComponents.length > 0) {
+      const container = new ContainerBuilder();
+      this.textComponents.forEach((text) => {
+        container.addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(text)
+        );
+      });
+      components.push(container.toJSON());
+    }
+    components.push(...this.actionComponents);
+    return {
+      components,
+      flags: MessageFlags.IsComponentsV2
+    };
+  }
+  reply() {
+    return this.build();
+  }
+};
+var SimpleEmbedImpl = class {
+  textComponents = [];
+  actionComponents = [];
+  embedColor;
+  embedTitle;
+  embedDescription;
+  fields = [];
+  embedThumbnail;
+  embedImage;
+  embedFooter;
+  embedTimestamp;
+  title(text) {
+    this.embedTitle = text;
+    return this;
+  }
+  description(text) {
+    this.embedDescription = text;
+    return this;
+  }
+  color(hex) {
+    this.embedColor = hex;
+    return this;
+  }
+  field(name, value, inline = false) {
+    this.fields.push({ name, value, inline });
+    return this;
+  }
+  thumbnail(url) {
+    this.embedThumbnail = url;
     return this;
   }
   image(url) {
-    this._imageUrl = url;
+    this.embedImage = url;
     return this;
   }
-  footer(md) {
-    this._footerText = md;
+  footer(text) {
+    this.embedFooter = text;
     return this;
   }
-  toComponent() {
-    return {
-      type: ComponentType.ActionRow,
-      components: []
-    };
+  timestamp(date) {
+    this.embedTimestamp = date || /* @__PURE__ */ new Date();
+    return this;
   }
-  withActions(...rows) {
+  buttons(...buttons) {
+    const row = new ActionRowBuilder();
+    buttons.forEach((button) => row.addComponents(button));
+    this.actionComponents.push(row.toJSON());
+    return this;
+  }
+  select(menu) {
+    const row = new ActionRowBuilder();
+    row.addComponents(menu);
+    this.actionComponents.push(row.toJSON());
+    return this;
+  }
+  build() {
+    const components = [];
+    const container = new ContainerBuilder();
+    if (this.embedTitle) {
+      container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(`**${this.embedTitle}**`)
+      );
+    }
+    if (this.embedDescription) {
+      container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(this.embedDescription)
+      );
+    }
+    if (this.fields.length > 0) {
+      this.fields.forEach((field) => {
+        const fieldText = field.inline ? `**${field.name}** ${field.value}` : `**${field.name}**
+${field.value}`;
+        container.addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(fieldText)
+        );
+      });
+    }
+    if (this.embedFooter) {
+      container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(`*${this.embedFooter}*`)
+      );
+    }
+    if (this.embedTimestamp) {
+      container.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(`<t:${Math.floor(this.embedTimestamp.getTime() / 1e3)}:R>`)
+      );
+    }
+    components.push(container.toJSON());
+    if (this.embedThumbnail) {
+      const thumbContainer = new ContainerBuilder();
+      thumbContainer.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(`![Thumbnail](${this.embedThumbnail})`)
+      );
+      components.push(thumbContainer.toJSON());
+    }
+    if (this.embedImage) {
+      const imageContainer = new ContainerBuilder();
+      imageContainer.addTextDisplayComponents(
+        new TextDisplayBuilder().setContent(`![Embed image](${this.embedImage})`)
+      );
+      components.push(imageContainer.toJSON());
+    }
+    components.push(...this.actionComponents);
     return {
-      components: rows,
+      components,
       flags: MessageFlags.IsComponentsV2
     };
   }
 };
 var btn = {
   /**
-   * Create a primary (blurple) button
+   * Create a primary button
    * @param id - Custom ID for the button
    * @param label - Button label text
    * @returns ButtonBuilder configured as primary style
@@ -364,7 +619,7 @@ var btn = {
     return new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(ButtonStyle.Primary);
   },
   /**
-   * Create a secondary (grey) button
+   * Create a secondary button
    * @param id - Custom ID for the button
    * @param label - Button label text
    * @returns ButtonBuilder configured as secondary style
@@ -373,7 +628,7 @@ var btn = {
     return new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(ButtonStyle.Secondary);
   },
   /**
-   * Create a danger (red) button
+   * Create a danger button
    * @param id - Custom ID for the button
    * @param label - Button label text
    * @returns ButtonBuilder configured as danger style
@@ -382,8 +637,17 @@ var btn = {
     return new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(ButtonStyle.Danger);
   },
   /**
-   * Create a link button (opens URL)
-   * @param url - URL to open when clicked
+   * Create a success button
+   * @param id - Custom ID for the button
+   * @param label - Button label text
+   * @returns ButtonBuilder configured as success style
+   */
+  success(id, label) {
+    return new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(ButtonStyle.Success);
+  },
+  /**
+   * Create a link button
+   * @param url - URL for the button to link to
    * @param label - Button label text
    * @returns ButtonBuilder configured as link style
    */
@@ -391,24 +655,94 @@ var btn = {
     return new ButtonBuilder().setURL(url).setLabel(label).setStyle(ButtonStyle.Link);
   }
 };
-function convertEmbed(embed) {
-  const builder = card();
-  if (embed.data?.color) {
-    builder.color(embed.data.color);
+var select = {
+  /**
+   * Create a string select menu
+   * @param id - Custom ID for the menu
+   * @param placeholder - Placeholder text
+   * @param options - Array of options with label, value, and optional description
+   * @returns StringSelectMenuBuilder
+   */
+  string(id, placeholder, options) {
+    const menu = new StringSelectMenuBuilder().setCustomId(id).setPlaceholder(placeholder);
+    options.forEach((option) => {
+      const menuOption = new StringSelectMenuOptionBuilder().setLabel(option.label).setValue(option.value);
+      if (option.description) {
+        menuOption.setDescription(option.description);
+      }
+      menu.addOptions(menuOption);
+    });
+    return menu;
+  },
+  /**
+   * Create a user select menu
+   * @param id - Custom ID for the menu
+   * @param placeholder - Placeholder text
+   * @returns UserSelectMenuBuilder
+   */
+  user(id, placeholder) {
+    return new UserSelectMenuBuilder().setCustomId(id).setPlaceholder(placeholder);
+  },
+  /**
+   * Create a role select menu
+   * @param id - Custom ID for the menu
+   * @param placeholder - Placeholder text
+   * @returns RoleSelectMenuBuilder
+   */
+  role(id, placeholder) {
+    return new RoleSelectMenuBuilder().setCustomId(id).setPlaceholder(placeholder);
+  },
+  /**
+   * Create a channel select menu
+   * @param id - Custom ID for the menu
+   * @param placeholder - Placeholder text
+   * @returns ChannelSelectMenuBuilder
+   */
+  channel(id, placeholder) {
+    return new ChannelSelectMenuBuilder().setCustomId(id).setPlaceholder(placeholder);
   }
-  if (embed.data?.description) {
-    builder.section(embed.data.description);
+};
+function convertEmbed(embed3) {
+  const builder = embed3();
+  if (embed3.data?.color) {
+    builder.color(embed3.data.color);
   }
-  if (embed.data?.thumbnail?.url) {
-    builder.thumb(embed.data.thumbnail.url);
+  if (embed3.data?.title) {
+    builder.title(embed3.data.title);
   }
-  if (embed.data?.image?.url) {
-    builder.image(embed.data.image.url);
+  if (embed3.data?.description) {
+    builder.description(embed3.data.description);
   }
-  if (embed.data?.footer?.text) {
-    builder.footer(embed.data.footer.text);
+  if (embed3.data?.fields) {
+    for (const field of embed3.data.fields) {
+      builder.field(field.name, field.value, field.inline);
+    }
+  }
+  if (embed3.data?.thumbnail?.url) {
+    builder.thumbnail(embed3.data.thumbnail.url);
+  }
+  if (embed3.data?.image?.url) {
+    builder.image(embed3.data.image.url);
+  }
+  if (embed3.data?.footer?.text) {
+    builder.footer(embed3.data.footer.text);
+  }
+  if (embed3.data?.timestamp) {
+    builder.timestamp(new Date(embed3.data.timestamp));
   }
   return builder;
+}
+function migrateEmbeds(embeds) {
+  return embeds.map((embed3) => convertEmbed(embed3));
+}
+function needsMigration(message) {
+  return message.embeds && message.embeds.length > 0;
+}
+function migrateMessage(message) {
+  if (!needsMigration(message)) {
+    return [];
+  }
+  return migrateEmbeds(message.embeds);
 }
 async function confirm(interaction, text, options = {}) {
   const {
@@ -418,15 +752,15 @@ async function confirm(interaction, text, options = {}) {
     ephemeral = false,
     ui = (base) => base
   } = options;
-  const baseCard = card().section(`\u26A0\uFE0F **Confirmation Required**
+  const baseCard = msg().text(`\u26A0\uFE0F **Confirmation Required**
 
 ${text}`);
   const confirmCard = ui(baseCard);
-  const actionRow = new ActionRowBuilder().addComponents(
+  new ActionRowBuilder().addComponents(
     btn.danger(yesId, "Yes"),
     btn.secondary(noId, "No")
   );
-  const response = confirmCard.withActions(actionRow);
+  const response = confirmCard.buttons(btn.danger(yesId, "Yes"), btn.secondary(noId, "No")).build();
   const flags = response.flags | (ephemeral ? MessageFlags.Ephemeral : 0);
   let message;
   if (interaction.replied || interaction.deferred) {
@@ -443,16 +777,16 @@ ${text}`);
       componentType: ComponentType.Button
     });
     const confirmed = buttonInteraction.customId === yesId;
-    const resultCard = card().section(
+    const resultCard = msg().text(
       confirmed ? "\u2705 **Confirmed**\nAction will proceed." : "\u274C **Cancelled**\nNo action taken."
     );
-    const resultResponse = resultCard.withActions();
+    const resultResponse = resultCard.build();
     await buttonInteraction.update({ components: resultResponse.components });
     return confirmed;
   } catch (error) {
-    const timeoutCard = card().section("\u23F0 **Timed out**\nNo response received.");
+    const timeoutCard = msg().text("\u23F0 **Timed out**\nNo response received.");
     try {
-      const timeoutResponse = timeoutCard.withActions();
+      const timeoutResponse = timeoutCard.build();
       await interaction.editReply({ components: timeoutResponse.components });
     } catch {
     }
@@ -468,8 +802,8 @@ async function paginate(interaction, items, options = {}) {
     render = defaultPaginateRender
   } = options;
   if (items.length === 0) {
-    const emptyCard = card().section("\u{1F4ED} **No items to display**");
-    const response = emptyCard.withActions();
+    const emptyCard = msg().text("\u{1F4ED} **No items to display**");
+    const response = emptyCard.build();
     response.flags = response.flags | (ephemeral ? MessageFlags.Ephemeral : 0);
     const responseData = response;
     await interaction.reply({ components: responseData.components, flags: responseData.flags });
@@ -491,7 +825,7 @@ async function paginate(interaction, items, options = {}) {
         btn.secondary("page_last", "\u23ED\uFE0F").setDisabled(pageIndex === totalPages - 1)
       );
     }
-    const response = pageCard.withActions(actionRow);
+    const response = pageCard.buttons(...actionRow.components).build();
     response.flags = response.flags | (ephemeral ? MessageFlags.Ephemeral : 0);
     return await targetInteraction.update ? targetInteraction.update(response) : targetInteraction.reply({ ...response, fetchReply: true });
   };
@@ -531,7 +865,7 @@ async function paginate(interaction, items, options = {}) {
         currentPage + 1,
         totalPages
       );
-      const timeoutResponse = timeoutCard.withActions();
+      const timeoutResponse = timeoutCard.buttons().build();
       await interaction.editReply({ components: timeoutResponse.components });
     } catch {
     }
@@ -561,7 +895,7 @@ async function collectButtons(message, options = {}) {
 }
 function defaultPaginateRender(items, page, totalPages) {
   const content = items.join("\n") || "No items on this page";
-  return card().section(`\u{1F4C4} **Page ${page} of ${totalPages}**
+  return msg().text(`\u{1F4C4} **Page ${page} of ${totalPages}**
 
 ${content}`).footer(`${items.length} items on this page`);
 }
@@ -686,15 +1020,54 @@ async function canSend(channel) {
   console.warn("canSend not yet implemented - coming in v0.2");
   return false;
 }
-
-// src/shards/index.ts
-function autoShard(entry, opts) {
-  console.warn("autoShard not yet implemented - coming in v0.3");
-  return null;
+function autoShard(token, options = {}) {
+  const {
+    totalShards = "auto",
+    respawn = true,
+    logger = createDefaultLogger4()
+  } = options;
+  const manager = new ShardingManager("./dist/bot.js", {
+    token,
+    totalShards,
+    respawn
+  });
+  manager.on("shardCreate", (shard) => {
+    logger.info(`Launched shard ${shard.id}`);
+  });
+  return manager;
 }
-async function shardHealth(manager) {
-  console.warn("shardHealth not yet implemented - coming in v0.3");
-  return { ok: false, details: {} };
+async function shardHealth(client) {
+  const shardInfo = {
+    id: 0,
+    status: client.ws.status.toString(),
+    guilds: client.guilds.cache.size,
+    ping: client.ws.ping,
+    uptime: client.uptime || 0
+  };
+  return {
+    total: 1,
+    online: shardInfo.status === "ready" ? 1 : 0,
+    offline: shardInfo.status === "ready" ? 0 : 1,
+    shards: [shardInfo],
+    averagePing: shardInfo.ping,
+    totalGuilds: shardInfo.guilds
+  };
+}
+async function broadcastToShards(client, message) {
+  client.emit("broadcast", message);
+  return [true];
+}
+async function getTotalGuildCount(client) {
+  const health = await shardHealth(client);
+  return health.totalGuilds;
+}
+function createDefaultLogger4() {
+  return {
+    debug: (message, ...args) => console.debug(`[SHARD] ${message}`, ...args),
+    info: (message, ...args) => console.info(`[SHARD] ${message}`, ...args),
+    warn: (message, ...args) => console.warn(`[SHARD] ${message}`, ...args),
+    error: (message, ...args) => console.error(`[SHARD] ${message}`, ...args)
+  };
 }
 
 // src/cache/index.ts
@@ -760,10 +1133,66 @@ function redisCache(url) {
 }
 
 // src/i18n/index.ts
-function createI18n(dict) {
-  console.warn("createI18n not yet implemented - coming in v0.3");
-  return (i, key, vars) => {
-    return key;
+function createI18n(locales, options = {}) {
+  const {
+    defaultLocale = "en",
+    fallbackLocale = "en",
+    logger = createDefaultLogger5()
+  } = options;
+  let currentLocale = defaultLocale;
+  function interpolate(text, params = {}) {
+    return text.replace(/\{(\w+)\}/g, (match, key) => {
+      return params[key]?.toString() || match;
+    });
+  }
+  function getTranslation(key, locale = currentLocale) {
+    const localeData = locales[locale];
+    if (!localeData) {
+      logger.warn(`Locale '${locale}' not found, falling back to '${fallbackLocale}'`);
+      return locales[fallbackLocale]?.[key] || null;
+    }
+    return localeData[key] || null;
+  }
+  return {
+    t(key, locale, params) {
+      const translation = getTranslation(key, locale);
+      if (!translation) {
+        logger.warn(`Translation key '${key}' not found for locale '${locale || currentLocale}'`);
+        return key;
+      }
+      return interpolate(translation, params);
+    },
+    get locale() {
+      return currentLocale;
+    },
+    setLocale(locale) {
+      if (locales[locale]) {
+        currentLocale = locale;
+        logger.info(`Locale set to '${locale}'`);
+      } else {
+        logger.warn(`Locale '${locale}' not found, keeping current locale '${currentLocale}'`);
+      }
+    },
+    has(key, locale) {
+      return getTranslation(key, locale) !== null;
+    }
+  };
+}
+function getUserLocale(user) {
+  return "en";
+}
+function formatNumber(number, locale = "en") {
+  return new Intl.NumberFormat(locale).format(number);
+}
+function formatDate(date, locale = "en", options) {
+  return new Intl.DateTimeFormat(locale, options).format(date);
+}
+function createDefaultLogger5() {
+  return {
+    debug: (message, ...args) => console.debug(`[I18N] ${message}`, ...args),
+    info: (message, ...args) => console.info(`[I18N] ${message}`, ...args),
+    warn: (message, ...args) => console.warn(`[I18N] ${message}`, ...args),
+    error: (message, ...args) => console.error(`[I18N] ${message}`, ...args)
   };
 }
 
@@ -800,7 +1229,7 @@ var RateLimitError = class extends EasierError {
   }
 };
 function installInteractionErrorHandler(client, logger) {
-  const log = logger || createDefaultLogger4();
+  const log = logger || createDefaultLogger6();
   client.on("interactionCreate", async (interaction) => {
     if (!interaction.isRepliable()) return;
     const originalReply = interaction.reply.bind(interaction);
@@ -897,31 +1326,31 @@ function createLogger(options = {}) {
   return {
     debug: (message, ...args) => {
       if (shouldLog("debug")) {
-        const { message: msg, args: redactedArgs } = redactMessage(message, ...args);
-        console.debug(`[DEBUG] ${msg}`, ...redactedArgs);
+        const { message: msg2, args: redactedArgs } = redactMessage(message, ...args);
+        console.debug(`[DEBUG] ${msg2}`, ...redactedArgs);
       }
     },
     info: (message, ...args) => {
       if (shouldLog("info")) {
-        const { message: msg, args: redactedArgs } = redactMessage(message, ...args);
-        console.info(`[INFO] ${msg}`, ...redactedArgs);
+        const { message: msg2, args: redactedArgs } = redactMessage(message, ...args);
+        console.info(`[INFO] ${msg2}`, ...redactedArgs);
       }
     },
     warn: (message, ...args) => {
       if (shouldLog("warn")) {
-        const { message: msg, args: redactedArgs } = redactMessage(message, ...args);
-        console.warn(`[WARN] ${msg}`, ...redactedArgs);
+        const { message: msg2, args: redactedArgs } = redactMessage(message, ...args);
+        console.warn(`[WARN] ${msg2}`, ...redactedArgs);
       }
     },
     error: (message, ...args) => {
       if (shouldLog("error")) {
-        const { message: msg, args: redactedArgs } = redactMessage(message, ...args);
-        console.error(`[ERROR] ${msg}`, ...redactedArgs);
+        const { message: msg2, args: redactedArgs } = redactMessage(message, ...args);
+        console.error(`[ERROR] ${msg2}`, ...redactedArgs);
       }
     }
   };
 }
-function createDefaultLogger4() {
+function createDefaultLogger6() {
   return {
     debug: (message, ...args) => console.debug(`[DEBUG] ${message}`, ...args),
     info: (message, ...args) => console.info(`[INFO] ${message}`, ...args),
@@ -930,6 +1359,6 @@ function createDefaultLogger4() {
   };
 }
 
-export { CommandValidationError, EasierError, PermissionError, RateLimitError, autoShard, awaitModal, btn, canSend, card, collectButtons, confirm, convertEmbed, createClient, createCommandHandler, createI18n, createLogger, createPrefixCommandHandler, deploy, diagnose, ensureGuildMember, getMessageSafe, hasPerm, installInteractionErrorHandler, loadCommands, loadCommandsAsync, memoryCache, modal, paginate, redisCache, requireGuildAdmin, shardHealth, wrapRest };
+export { CommandValidationError, EasierError, PermissionError, RateLimitError, autoShard, awaitModal, broadcastToShards, btn, canSend, collectButtons, confirm, convertEmbed, createClient, createCommandHandler, createForm, createI18n, createLogger, createPagination, createPrefixCommandHandler, deploy, diagnose, embed, ensureGuildMember, formatDate, formatNumber, getMessageSafe, getTotalGuildCount, getUserLocale, hasPerm, installInteractionErrorHandler, loadCommands, loadCommandsAsync, memoryCache, migrateEmbeds, migrateMessage, modal, modalV2, msg, needsMigration, paginate, redisCache, requireGuildAdmin, select, shardHealth, wrapRest };
 //# sourceMappingURL=index.mjs.map
 //# sourceMappingURL=index.mjs.map

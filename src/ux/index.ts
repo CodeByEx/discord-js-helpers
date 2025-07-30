@@ -16,8 +16,8 @@ import {
   TextInputStyle
 } from 'discord.js';
 import type { Interaction } from 'discord.js';
-import { card, btn } from '../v2/index.js';
-import type { CardBuilder } from '../v2/index.js';
+import { msg, embed, btn } from '../v2/index.js';
+import type { SimpleMessage, SimpleEmbed } from '../v2/index.js';
 
 /**
  * Configuration options for confirm dialogs
@@ -32,7 +32,7 @@ export interface ConfirmOptions {
   /** Whether the response should be ephemeral */
   ephemeral?: boolean;
   /** Custom UI builder function */
-  ui?: (base: ReturnType<typeof card>) => ReturnType<typeof card>;
+  ui?: (base: ReturnType<typeof msg>) => ReturnType<typeof msg>;
 }
 
 /**
@@ -46,7 +46,7 @@ export interface PaginateOptions {
   /** Whether the response should be ephemeral */
   ephemeral?: boolean;
   /** Custom render function for each page */
-  render?: (items: string[], page: number, totalPages: number) => ReturnType<typeof card>;
+  render?: (items: string[], page: number, totalPages: number) => ReturnType<typeof msg>;
 }
 
 /**
@@ -72,7 +72,7 @@ export interface CollectOptions {
  * 
  * @example
  * ```typescript
- * import { confirm } from 'easier-djs';
+ * import { confirm } from 'discord-js-helpers';
  * 
  * if (await confirm(interaction, "Delete this channel?")) {
  *   // User confirmed, proceed with deletion
@@ -82,7 +82,7 @@ export interface CollectOptions {
  * 
  * @example
  * ```javascript
- * const { confirm } = require('easier-djs');
+ * const { confirm } = require('discord-js-helpers');
  * 
  * const confirmed = await confirm(interaction, "Are you sure?", {
  *   ephemeral: true,
@@ -104,7 +104,7 @@ export async function confirm(
   } = options;
 
   // Build the confirmation UI
-  const baseCard = card().section(`⚠️ **Confirmation Required**\n\n${text}`);
+  const baseCard = msg().text(`⚠️ **Confirmation Required**\n\n${text}`);
   const confirmCard = ui(baseCard);
   
   const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -112,7 +112,7 @@ export async function confirm(
     btn.secondary(noId, 'No')
   );
 
-  const response = confirmCard.withActions(actionRow);
+  const response = confirmCard.buttons(btn.danger(yesId, 'Yes'), btn.secondary(noId, 'No')).build();
   const flags = response.flags | (ephemeral ? MessageFlags.Ephemeral : 0);
 
   // Send the confirmation message
@@ -136,22 +136,22 @@ export async function confirm(
     const confirmed = buttonInteraction.customId === yesId;
     
     // Update the message to show the result
-    const resultCard = card().section(
+    const resultCard = msg().text(
       confirmed 
         ? '✅ **Confirmed**\nAction will proceed.'
         : '❌ **Cancelled**\nNo action taken.'
     );
 
-    const resultResponse = resultCard.withActions();
+    const resultResponse = resultCard.build();
     await buttonInteraction.update({ components: resultResponse.components });
     
     return confirmed;
   } catch (error) {
     // Timeout occurred
-    const timeoutCard = card().section('⏰ **Timed out**\nNo response received.');
+    const timeoutCard = msg().text('⏰ **Timed out**\nNo response received.');
     
     try {
-      const timeoutResponse = timeoutCard.withActions();
+      const timeoutResponse = timeoutCard.build();
       await interaction.editReply({ components: timeoutResponse.components });
     } catch {
       // Ignore edit errors (interaction might be expired)
@@ -171,7 +171,7 @@ export async function confirm(
  * 
  * @example
  * ```typescript
- * import { paginate } from 'easier-djs';
+ * import { paginate } from 'discord-js-helpers';
  * 
  * const userList = guild.members.cache.map(m => m.user.tag);
  * await paginate(interaction, userList, { 
@@ -182,7 +182,7 @@ export async function confirm(
  * 
  * @example
  * ```javascript
- * const { paginate } = require('easier-djs');
+ * const { paginate } = require('discord-js-helpers');
  * 
  * await paginate(interaction, items, {
  *   perPage: 5,
@@ -203,8 +203,8 @@ export async function paginate(
   } = options;
 
   if (items.length === 0) {
-    const emptyCard = card().section('📭 **No items to display**');
-    const response = emptyCard.withActions();
+    const emptyCard = msg().text('📭 **No items to display**');
+    const response = emptyCard.build();
     response.flags = response.flags | (ephemeral ? MessageFlags.Ephemeral : 0);
     
     const responseData = response;
@@ -234,7 +234,7 @@ export async function paginate(
       );
     }
     
-    const response = pageCard.withActions(actionRow);
+    const response = pageCard.buttons(...actionRow.components).build();
     response.flags = response.flags | (ephemeral ? MessageFlags.Ephemeral : 0);
     
     return await targetInteraction.update ? 
@@ -287,8 +287,8 @@ export async function paginate(
         totalPages
       );
       
-             const timeoutResponse = timeoutCard.withActions();
-       await interaction.editReply({ components: timeoutResponse.components });
+      const timeoutResponse = timeoutCard.buttons().build();
+      await interaction.editReply({ components: timeoutResponse.components });
     } catch {
       // Ignore edit errors
     }
@@ -304,7 +304,7 @@ export async function paginate(
  * 
  * @example
  * ```typescript
- * import { collectButtons } from 'easier-djs';
+ * import { collectButtons } from 'discord-js-helpers';
  * 
  * const interactions = await collectButtons(message, {
  *   filter: (i) => i.user.id === interaction.user.id,
@@ -346,10 +346,10 @@ export async function collectButtons(
 /**
  * Default render function for pagination
  */
-function defaultPaginateRender(items: string[], page: number, totalPages: number): ReturnType<typeof card> {
+function defaultPaginateRender(items: string[], page: number, totalPages: number): ReturnType<typeof msg> {
   const content = items.join('\n') || 'No items on this page';
-  return card()
-    .section(`📄 **Page ${page} of ${totalPages}**\n\n${content}`)
+  return msg()
+    .text(`📄 **Page ${page} of ${totalPages}**\n\n${content}`)
     .footer(`${items.length} items on this page`);
 }
 
@@ -384,7 +384,7 @@ export interface ModalField {
  * 
  * @example
  * ```typescript
- * import { modal } from 'easier-djs';
+ * import { modal } from 'discord-js-helpers';
  * 
  * const form = modal('report', 'Report User', [
  *   { id: 'user', label: 'User ID', required: true },
@@ -438,7 +438,7 @@ export function modal(id: string, title: string, fields: ModalField[]): ModalBui
  * 
  * @example
  * ```typescript
- * import { modal, awaitModal } from 'easier-djs';
+ * import { modal, awaitModal } from 'discord-js-helpers';
  * 
  * const form = modal('report', 'Report User', [
  *   { id: 'user', label: 'User ID', required: true },

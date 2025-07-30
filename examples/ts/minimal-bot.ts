@@ -1,6 +1,13 @@
-import { createClient, deploy, card, btn, createCommandHandler } from 'easier-djs';
-import { SlashCommandBuilder, ActionRowBuilder } from 'discord.js';
-import type { CommandDefinition } from 'easier-djs';
+import { 
+  createClient, 
+  deploy, 
+  msg, 
+  embed, 
+  btn, 
+  createCommandHandler
+} from 'discord-js-helpers';
+import { SlashCommandBuilder } from 'discord.js';
+import type { CommandDefinition } from 'discord-js-helpers';
 
 // Create client with automatic intent configuration
 const client = createClient({ 
@@ -21,17 +28,17 @@ const commands: CommandDefinition[] = [
         return;
       }
 
-      const ui = card()
+      const ui = embed()
         .color(0x5865f2)
-        .section(`**${guild.name}**\n\nMembers: ${guild.memberCount}\nCreated: <t:${Math.floor(guild.createdTimestamp / 1000)}:R>`)
-        .thumb(guild.iconURL() || 'https://cdn.discordapp.com/embed/avatars/0.png')
+        .title(`**${guild.name}**`)
+        .description(`Members: ${guild.memberCount}\nCreated: <t:${Math.floor(guild.createdTimestamp / 1000)}:R>`)
+        .thumbnail(guild.iconURL() || 'https://cdn.discordapp.com/embed/avatars/0.png')
         .footer('Server information')
-        .withActions(
-          new ActionRowBuilder().addComponents(
-            btn.primary('refresh_server', 'Refresh'),
-            btn.secondary('more_info', 'More Info')
-          )
-        );
+        .buttons(
+          btn.primary('refresh_server', 'Refresh'),
+          btn.secondary('more_info', 'More Info')
+        )
+        .build();
 
       await interaction.reply({ 
         components: ui.components,
@@ -52,15 +59,20 @@ const commands: CommandDefinition[] = [
       const latency = sent.createdTimestamp - interaction.createdTimestamp;
       const wsLatency = client.ws.ping;
       
-      const ui = card()
+      const ui = embed()
         .color(0x00ff00)
-        .section(`🏓 **Pong!**\n\nLatency: ${latency}ms\nWebSocket: ${wsLatency}ms`)
-        .footer('Bot latency check');
+        .title('🏓 **Pong!**')
+        .description(`Latency: ${latency}ms\nWebSocket: ${wsLatency}ms`)
+        .footer('Bot latency check')
+        .buttons(
+          btn.primary('refresh_server', 'Refresh'),
+          btn.secondary('more_info', 'More Info')
+        )
+        .build();
       
-      const response = ui.withActions();
       await interaction.editReply({ 
-        components: response.components,
-        flags: response.flags as any
+        components: ui.components,
+        flags: ui.flags as any
       });
     }
   }
@@ -86,7 +98,7 @@ client.on('interactionCreate', async (interaction) => {
 // Deploy commands and start bot
 async function main() {
   try {
-    console.log('🚀 Starting easier-djs example bot...');
+    console.log('🚀 Starting discord-js-helpers example bot...');
     
     // Deploy commands (use guild for development, global for production)
     await deploy(client, commands, {

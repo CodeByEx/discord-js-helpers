@@ -14,7 +14,7 @@ export type Features = Array<
 >;
 
 /**
- * Minimal logger interface that easier-djs expects
+ * Minimal logger interface that discord-js-helpers expects
  */
 export interface Logger {
   debug(message: string, ...args: any[]): void;
@@ -32,7 +32,7 @@ export interface CommandContext {
 }
 
 /**
- * Command definition structure for easier-djs
+ * Command definition structure for discord-js-helpers
  */
 export interface CommandDefinition {
   /** The slash command builder from discord.js */
@@ -86,4 +86,13 @@ export interface CacheAdapter {
   get<T>(key: string): Promise<T | null>;
   set<T>(key: string, value: T, ttlSeconds?: number): Promise<void>;
   del(key: string): Promise<void>;
-} 
+}
+
+export interface AutoShardOptions {
+  totalShards?: number | 'auto';
+  respawn?: boolean;
+  spawnTimeout?: number;
+  logger?: Logger;
+}
+
+export type Dict = Record<string, Record<string, string>>; 

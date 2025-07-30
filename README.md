@@ -1,274 +1,340 @@
-# easier-djs
+# discord-js-helpers
 
-Drop-in Discord.js helpers: zero-config client setup, V2 cards, deploy tools, UX primitives. TypeScript-first with JS-friendly JSDoc.
+> Discord.js helpers with zero configuration
 
-## 🎯 Goals
+Drop friction: fewer foot-guns (intents, permissions, rate limits, V2 flags).  
+Fast to ship: one-liners for deploy, pagination, confirm flows, and V2 components.  
+Type-safe but JS-friendly: first-class TS types + good JSDoc for JS.  
+Composable: small helpers; no framework lock-in; tree-shakable.  
+Production-ready: retry/backoff, sharding helpers, diagnostics, error middleware.
 
-- **Drop friction**: fewer foot-guns (intents, permissions, rate limits, V2 flags)
-- **Fast to ship**: one-liners for deploy, pagination, confirm flows, and V2 cards
-- **Type-safe but JS-friendly**: first-class TS types + good JSDoc for JS
-- **Composable**: small helpers; no framework lock-in; tree-shakable
-- **Production-ready**: retry/backoff, sharding helpers, diagnostics, error middleware
-
-## 📦 Installation
-
-```bash
-npm install easier-djs discord.js
-```
-
-**Requirements:**
-- Node.js >= 18.17 (LTS+ timers, fetch, URL)
-- discord.js ^14.19.0+
-
-## 🚀 Quick Start
+## Quick Start
 
 ### TypeScript
 
 ```typescript
-import { createClient, deploy, card, btn } from 'easier-djs';
-import { SlashCommandBuilder, ActionRowBuilder } from 'discord.js';
+import { createClient, deploy, msg, btn, createCommandHandler } from 'discord-js-helpers';
+import { SlashCommandBuilder } from 'discord.js';
 
-const client = createClient({ 
-  features: ['commands', 'v2', 'diagnostics'] 
-});
+const client = createClient({ features: ['commands', 'v2'] });
 
-const commands = [{
-  data: new SlashCommandBuilder().setName('server').setDescription('Show server info'),
-  async run(interaction) {
-    const ui = card()
-      .color(0x5865f2)
-      .section(`**${interaction.guild?.name}**\nMembers: ${interaction.guild?.memberCount}`)
-      .withActions(
-        new ActionRowBuilder().addComponents(
-          btn.primary('refresh', 'Refresh')
-        )
-      );
-    await interaction.reply(ui);
+const commands = [
+  {
+    data: new SlashCommandBuilder().setName('ping').setDescription('Pong!'),
+    async run(interaction) {
+      const ui = msg()
+        .text('🏓 Pong!')
+        .footer('Bot latency check')
+        .buttons(btn.primary('refresh', 'Refresh'))
+        .build();
+      
+      await interaction.reply(ui);
+    }
   }
-}];
+];
 
-await deploy(client, commands, { scope: 'guild', guildId: 'YOUR_GUILD_ID' });
+client.on('interactionCreate', createCommandHandler(commands));
+
+await deploy(client, commands, { scope: 'guild' });
 await client.login(process.env.DISCORD_TOKEN);
 ```
 
 ### JavaScript
 
 ```javascript
-const { createClient, deploy, card, btn } = require('easier-djs');
-const { SlashCommandBuilder, ActionRowBuilder } = require('discord.js');
+import { createClient, deploy, msg, btn, createCommandHandler } from 'discord-js-helpers';
+import { SlashCommandBuilder } from 'discord.js';
 
 const client = createClient({ features: ['commands', 'v2'] });
 
-const commands = [{
-  data: new SlashCommandBuilder().setName('ping').setDescription('Ping'),
-  run: async (interaction) => {
-    const ui = card().section('🏓 Pong!');
-    await interaction.reply(ui.withActions());
-  }
-}];
-
-deploy(client, commands, { scope: 'guild', guildId: process.env.DEV_GUILD_ID })
-  .then(() => client.login(process.env.DISCORD_TOKEN));
-```
-
-## ✅ What's Implemented (v0.2)
-
-### 🔧 Client & Diagnostics
-- `createClient()` - Automatic intent configuration based on features
-- `diagnose()` - Comprehensive health checks and troubleshooting
-
-### 📋 Commands
-- `deploy()` - Smart command deployment with diff display
-- `createCommandHandler()` - Simple command routing with error handling
-- `createPrefixCommandHandler()` - Prefix command support with aliases
-- `loadCommands()` / `loadCommandsAsync()` - Command loading utilities
-
-### 🎨 V2 Components
-- `card()` - Fluent V2 card builder with auto-flags
-- `btn.*` - Button helpers (primary, secondary, danger, link)
-- `convertEmbed()` - Migration helper from EmbedBuilder
-
-### 🎯 UX Primitives  
-- `confirm()` - Yes/No confirmation dialogs with timeout
-- `paginate()` - Automatic pagination for large lists
-- `collectButtons()` - Component interaction collection
-- `modal()` - Schema-first modal builders
-- `awaitModal()` - Modal submission with parsed data
-
-### 🔄 REST Helpers
-- `wrapRest()` - Rate-limit-safe REST with retry logic
-- Exponential backoff with jitter for failed requests
-
-### 💾 Cache Adapters
-- `memoryCache()` - In-memory cache with TTL support
-- `redisCache()` - Redis cache adapter (stub)
-- `getMessageSafe()` - Safe message fetching
-- `ensureGuildMember()` - Safe member fetching
-
-### 🛡️ Error Handling
-- `installInteractionErrorHandler()` - Auto error middleware
-- `createLogger()` - Redacting logger with security
-- Custom error classes with proper codes
-
-## 🔜 Coming Soon
-
-### v0.3  
-- 🌐 **Sharding** - Auto-scaling helpers
-- 🌍 **i18n** - Locale-aware responses
-- 🔄 **Migration Tools** - V1 → V2 upgrade utilities
-
-### v1.0
-- 🧪 **Testing Kit** - Mock interactions & snapshots
-- 📖 **Full Documentation** - Complete API reference
-- ⚡ **Performance** - Benchmarks & optimizations
-
-## 📖 API Reference
-
-### createClient(options?)
-
-Automatically configures Discord.js client with smart intent detection.
-
-```typescript
-const client = createClient({
-  features: ['commands', 'members', 'v2'],  // Auto-configures intents
-  handleErrors: true,                        // Install error middleware
-  logger: myLogger                          // Custom logger
-});
-```
-
-**Features:**
-- `commands` - Slash commands (no extra intents)
-- `messages` - Message content + guild messages
-- `members` - Guild members (privileged)
-- `reactions` - Message reactions  
-- `voice` - Voice state changes
-- `v2` - V2 components (no extra intents)
-- `diagnostics` - Basic guild access for health checks
-
-### card()
-
-Fluent V2 component builder that eliminates boilerplate.
-
-```typescript
-const ui = card()
-  .color(0x5865f2)                    // Embed color
-  .section("**Title**\nContent")      // Text section with markdown
-  .thumb(url)                         // Thumbnail image
-  .image(url)                         // Main image  
-  .footer("Footer text")              // Footer
-  .withActions(actionRow);            // Auto-sets V2 flags
-```
-
-### UX Helpers
-
-```typescript
-// Confirmation dialog
-if (await confirm(interaction, "Delete channel?")) {
-  // User confirmed
-}
-
-// Pagination
-await paginate(interaction, longList, { perPage: 10 });
-
-// Button collection
-const clicks = await collectButtons(message, { time: 30000 });
-
-// Modal forms
-const form = modal('report', 'Report User', [
-  { id: 'user', label: 'User ID', required: true },
-  { id: 'reason', label: 'Reason', style: 'paragraph' }
-]);
-const data = await awaitModal(interaction, form);
-```
-
-### Prefix Commands
-
-```typescript
-const prefixCommands = [
+const commands = [
   {
-    name: 'ping',
-    aliases: ['p'],
-    description: 'Check bot latency',
-    run: async (message, args, ctx) => {
-      await message.reply('Pong!');
+    data: new SlashCommandBuilder().setName('ping').setDescription('Pong!'),
+    async run(interaction) {
+      const ui = msg()
+        .text('🏓 Pong!')
+        .footer('Bot latency check')
+        .buttons(btn.primary('refresh', 'Refresh'))
+        .build();
+      
+      await interaction.reply(ui);
     }
   }
 ];
 
-client.on('messageCreate', createPrefixCommandHandler(prefixCommands, '!'));
+client.on('interactionCreate', createCommandHandler(commands));
+
+await deploy(client, commands, { scope: 'guild' });
+await client.login(process.env.DISCORD_TOKEN);
 ```
 
-### Cache & REST
+## V2 Components
+
+Create rich, interactive messages with Discord Components v2 using a simple, v1-like API:
 
 ```typescript
-// Cache
-const cache = memoryCache();
-await cache.set('key', value, 3600); // 1 hour TTL
-const data = await cache.get('key');
+// Simple message with text and buttons
+const message = msg()
+  .title('Welcome!')
+  .text('This is a simple message with **markdown** support.')
+  .separator()
+  .field('Status', 'Online', true)
+  .buttons(
+    btn.primary('action', 'Click me'),
+    btn.secondary('help', 'Help'),
+    btn.danger('delete', 'Delete')
+  )
+  .build();
 
-// REST with retries
-const rest = new REST({ version: '10' }).setToken(token);
-const enhancedRest = wrapRest(rest, { maxRetries: 3 });
+// Embed-like structure
+const embed = embed()
+  .title('Server Information')
+  .description('Details about the server')
+  .color(0x5865f2)
+  .field('Members', '1000', true)
+  .field('Channels', '50', true)
+  .footer('Requested by user')
+  .buttons(btn.success('join', 'Join Server'))
+  .build();
 ```
 
-## 🏗️ Development
+## Enhanced Features
 
-```bash
-# Install dependencies
-npm install
+### Modal Support
 
-# Build (ESM + CJS + .d.ts)
-npm run build
+Create complex forms with predefined templates:
 
-# Development build with watch
-npm run dev
+```typescript
+import { modalV2 } from 'discord-js-helpers';
 
-# Type checking
-npm run typecheck
+// Contact form
+const contactModal = modalV2.contact('contact_form');
 
-# Linting
-npm run lint
+// Feedback form
+const feedbackModal = modalV2.feedback('feedback_form');
+
+// Custom form
+const customModal = modalV2.create('custom_form', 'Custom Form', [
+  { id: 'name', label: 'Name', placeholder: 'Enter your name', required: true },
+  { id: 'age', label: 'Age', placeholder: 'Enter your age', required: true },
+  { id: 'bio', label: 'Bio', placeholder: 'Tell us about yourself', style: 2, required: false }
+]);
+
+// Settings form
+const settingsModal = modalV2.settings('settings_form', [
+  'Username',
+  'Email', 
+  'Timezone',
+  'Language'
+]);
+
+await interaction.showModal(contactModal);
 ```
 
-## 📂 Project Structure
+### Pagination Helpers
+
+Handle large datasets with built-in pagination:
+
+```typescript
+import { createPagination } from 'discord-js-helpers';
+
+const items = Array.from({ length: 100 }, (_, i) => ({
+  title: `Item ${i + 1}`,
+  description: `Description for item ${i + 1}`
+}));
+
+const pagination = createPagination({
+  items,
+  itemsPerPage: 5,
+  currentPage: 1,
+  showPageInfo: true,
+  showNavigation: true
+});
+
+await interaction.reply(pagination);
+```
+
+### Media Galleries & Thumbnails
+
+Add rich media content to your messages:
+
+```typescript
+const message = msg()
+  .title('🖼️ Photo Gallery')
+  .text('Check out these images:')
+  .mediaGallery([
+    'https://example.com/image1.jpg',
+    'https://example.com/image2.jpg',
+    'https://example.com/image3.jpg'
+  ])
+  .separator()
+  .text('With thumbnail:')
+  .thumbnail('https://example.com/thumb.jpg', 'Sample thumbnail')
+  .text('This message has a thumbnail accessory')
+  .build();
+```
+
+### Form Builders
+
+Create complex forms with validation:
+
+```typescript
+import { createForm } from 'discord-js-helpers';
+
+const form = createForm([
+  { 
+    id: 'name', 
+    label: 'Name', 
+    placeholder: 'Enter your name', 
+    required: true,
+    minLength: 2,
+    maxLength: 50
+  },
+  { 
+    id: 'email', 
+    label: 'Email', 
+    placeholder: 'Enter your email', 
+    required: true 
+  },
+  { 
+    id: 'message', 
+    label: 'Message', 
+    placeholder: 'Tell us more...', 
+    required: true,
+    style: 2 // Paragraph style
+  }
+]);
+
+await interaction.showModal(form);
+```
+
+## API Reference
+
+### Core Functions
+
+#### `msg() / embed()`
+
+Fluent builders for creating V2 components:
+
+```typescript
+msg()
+  .text(content: string)           // Add text content
+  .title(text: string)             // Add bold title
+  .subtitle(text: string)          // Add italic subtitle
+  .separator()                     // Add separator line
+  .smallSeparator()                // Add small separator
+  .image(url: string, alt?: string) // Add image
+  .images(urls: string[])          // Add multiple images
+  .mediaGallery(urls: string[])    // Add media gallery
+  .thumbnail(url: string, alt?: string) // Add thumbnail
+  .field(name: string, value: string, inline?: boolean) // Add field
+  .color(hex: number)              // Set color theme
+  .footer(text: string)            // Add footer
+  .buttons(...buttons: ButtonBuilder[]) // Add buttons
+  .select(menu: SelectMenuBuilder) // Add select menu
+  .build()                         // Build for Discord.js
+```
+
+#### `btn` namespace
+
+```typescript
+btn.primary(id: string, label: string)    // Primary button
+btn.secondary(id: string, label: string)  // Secondary button
+btn.danger(id: string, label: string)     // Danger button
+btn.success(id: string, label: string)    // Success button
+btn.link(url: string, label: string)      // Link button
+```
+
+#### `select` namespace
+
+```typescript
+select.string(id: string, placeholder: string, options: Array<{label: string, value: string, description?: string}>)
+select.user(id: string, placeholder: string)
+select.role(id: string, placeholder: string)
+select.channel(id: string, placeholder: string)
+```
+
+#### `modalV2` namespace
+
+```typescript
+modalV2.create(id: string, title: string, inputs: FormField[]) // Custom modal
+modalV2.contact(id: string)                                     // Contact form
+modalV2.feedback(id: string)                                    // Feedback form
+modalV2.settings(id: string, fields: string[])                 // Settings form
+```
+
+#### Pagination & Forms
+
+```typescript
+createPagination(options: PaginationOptions) // Create paginated message
+createForm(fields: FormField[])              // Create custom form
+```
+
+### Migration Tools
+
+Convert existing v1 embeds to v2 format:
+
+```typescript
+import { convertEmbed, migrateEmbeds } from 'discord-js-helpers';
+
+// Convert single embed
+const oldEmbed = new EmbedBuilder()
+  .setTitle('Title')
+  .setDescription('Description');
+
+const newEmbed = convertEmbed(oldEmbed).build();
+
+// Convert multiple embeds
+const oldEmbeds = [embed1, embed2, embed3];
+const newEmbeds = migrateEmbeds(oldEmbeds).map(e => e.build());
+```
+
+## Migration Note
+
+If you were using the old `card()` API, here's how to migrate:
+
+**Old:**
+```typescript
+const ui = card()
+  .section('Content')
+  .withActions(btn.primary('test', 'Test'))
+```
+
+**New:**
+```typescript
+const ui = msg()
+  .text('Content')
+  .buttons(btn.primary('test', 'Test'))
+  .build()
+```
+
+## Project Structure
 
 ```
-easier-djs/
-  src/
-    client/          # createClient, intents presets, diagnostics  
-    commands/        # deploy, loader, guards/checks
-    v2/              # card(), sections, media, buttons/selects
-    ux/              # paginate, confirm, wizards, collectors
-    rest/            # rate-limit safe REST, retries (v0.2)
-    perms/           # permission helpers (v0.2)  
-    shards/          # autoShard(), health, IPC (v0.3)
-    cache/           # safe getters, adapters (v0.2)
-    i18n/            # tiny t() with locale detection (v0.3)
-    errors/          # error classes, middleware
-    types/           # shared TS types
-    index.ts         # flat re-exports
-  examples/
-    ts/              # TypeScript examples
-    js/              # JavaScript examples  
-  tests/             # Test suite (coming v1.0)
+src/
+├── client/          # Client creation & configuration
+├── commands/        # Command handling & deployment
+├── v2/             # V2 components (msg(), embed(), buttons, selects, modals)
+├── ux/             # UX primitives (confirm, paginate)
+├── rest/           # REST API helpers
+├── perms/          # Permission utilities
+├── shards/         # Sharding helpers
+├── cache/          # Caching utilities
+├── i18n/           # Internationalization
+├── errors/         # Error handling
+├── logging/        # Logging utilities
+└── types/          # Shared TypeScript types
 ```
 
-## 🤝 Contributing
+## Examples
 
-This project is in active development. The v0.1 MVP focuses on core functionality:
+See the `examples/` directory for complete bot implementations:
 
-1. **Client setup** - Remove intent configuration pain
-2. **V2 components** - Eliminate boilerplate and auto-flags  
-3. **Command deployment** - Smart diffing and deployment
-4. **UX primitives** - Pagination, confirmation, collection
-5. **Error handling** - Production-ready error middleware
+- `examples/ts/minimal-bot.ts` - Minimal bot with basic commands
+- `examples/ts/advanced-bot.ts` - Advanced bot with complex features
+- `examples/ts/v0.3-features.ts` - V2 components demo
+- `examples/ts/enhanced-features.ts` - Enhanced features demo (modals, pagination, forms)
 
-See the [roadmap](#-coming-soon) for planned features in upcoming versions.
+## License
 
-## 📄 License
-
-MIT License - see LICENSE file for details.
-
----
-
-**easier-djs** - Making Discord.js easier, one helper at a time. 
+MIT 

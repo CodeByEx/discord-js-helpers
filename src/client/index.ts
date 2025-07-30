@@ -23,7 +23,7 @@ const FEATURE_INTENTS: Record<string, GatewayIntentBits[]> = {
  * 
  * @example
  * ```typescript
- * import { createClient } from 'easier-djs';
+ * import { createClient } from 'discord-js-helpers';
  * 
  * const client = createClient({ 
  *   features: ['commands', 'members', 'v2', 'diagnostics'] 
@@ -32,7 +32,7 @@ const FEATURE_INTENTS: Record<string, GatewayIntentBits[]> = {
  * 
  * @example
  * ```javascript
- * const { createClient } = require('easier-djs');
+ * const { createClient } = require('discord-js-helpers');
  * const client = createClient({ features: ['commands', 'v2'] });
  * ```
  */
@@ -89,7 +89,7 @@ export function createClient(options: CreateClientOptions = {}): Client {
  * 
  * @example
  * ```typescript
- * import { createClient, diagnose } from 'easier-djs';
+ * import { createClient, diagnose } from 'discord-js-helpers';
  * 
  * const client = createClient({ features: ['commands', 'diagnostics'] });
  * await diagnose(client); // Prints actionable health checks
@@ -98,7 +98,7 @@ export function createClient(options: CreateClientOptions = {}): Client {
  * 
  * @example
  * ```javascript
- * const { createClient, diagnose } = require('easier-djs');
+ * const { createClient, diagnose } = require('discord-js-helpers');
  * const client = createClient({ features: ['commands'] });
  * diagnose(client).then(() => client.login(process.env.DISCORD_TOKEN));
  * ```
@@ -107,7 +107,7 @@ export async function diagnose(client: Client): Promise<void> {
   const logger = (client as any).__easierDjsLogger || createDefaultLogger();
   const features = (client as any).__easierDjsFeatures || [];
   
-  logger.info('🔍 Running easier-djs diagnostics...');
+  logger.info('🔍 Running discord-js-helpers diagnostics...');
   
   // Check if client is ready
   if (!client.isReady()) {
@@ -144,7 +144,7 @@ export async function diagnose(client: Client): Promise<void> {
   if (majorVersion >= 18) {
     logger.info(`✅ Node.js ${nodeVersion} (supported)`);
   } else {
-    logger.error(`❌ Node.js ${nodeVersion} is too old. easier-djs requires Node.js 18.17+`);
+    logger.error(`❌ Node.js ${nodeVersion} is too old. discord-js-helpers requires Node.js 18.17+`);
   }
   
   logger.info('🎯 Diagnostics complete!');
