@@ -28,7 +28,7 @@ export interface ShardHealth {
  * 
  * @example
  * ```typescript
- * import { autoShard } from 'discord-js-helpers';
+ * import { autoShard } from 'discord-js-simplified';
  * 
  * const manager = autoShard(process.env.DISCORD_TOKEN!, {
  *   totalShards: 'auto',
@@ -70,7 +70,7 @@ export function autoShard(token: string, options: AutoShardOptions = {}): Shardi
  * 
  * @example
  * ```typescript
- * import { shardHealth } from 'discord-js-helpers';
+ * import { shardHealth } from 'discord-js-simplified';
  * 
  * // Check health every 5 minutes
  * setInterval(async () => {
@@ -111,7 +111,7 @@ export async function shardHealth(client: Client): Promise<ShardHealth> {
  * 
  * @example
  * ```typescript
- * import { broadcastToShards } from 'discord-js-helpers';
+ * import { broadcastToShards } from 'discord-js-simplified';
  * 
  * // Update configuration across all shards
  * await broadcastToShards(client, {

@@ -1,5 +1,5 @@
 {
-  "name": "discord-js-helpers",
+  "name": "discord-js-simplified",
   "version": "0.3.0",
   "description": "Drop-in Discord.js helpers: zero-config client setup, V2 cards, deploy tools, UX primitives. TypeScript-first with JS-friendly JSDoc.",
   "author": "edinlol",
@@ -13,13 +13,13 @@
     "v2",
     "components"
   ],
-  "homepage": "https://github.com/CodeByEx/discord-js-helpers#readme",
+  "homepage": "https://github.com/CodeByEx/discord-js-simplified#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CodeByEx/discord-js-helpers.git"
+    "url": "git+https://github.com/CodeByEx/discord-js-simplified.git"
   },
   "bugs": {
-    "url": "https://github.com/CodeByEx/discord-js-helpers/issues"
+    "url": "https://github.com/CodeByEx/discord-js-simplified/issues"
   },
   "type": "module",
   "main": "./dist/index.cjs",

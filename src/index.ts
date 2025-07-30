@@ -1,5 +1,5 @@
 /**
- * discord-js-helpers - Discord.js helpers with zero configuration
+ * discord-js-simplified - Discord.js helpers with zero configuration
  * 
  * Drop friction: fewer foot-guns (intents, permissions, rate limits, V2 flags).
  * Fast to ship: one-liners for deploy, pagination, confirm flows, and V2 cards.

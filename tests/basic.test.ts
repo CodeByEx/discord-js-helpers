@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createClient, msg, btn, memoryCache } from '../src/index.js';
 
-describe('discord-js-helpers', () => {
+describe('discord-js-simplified', () => {
   describe('createClient', () => {
     it('should create a client with default options', () => {
       const client = createClient();

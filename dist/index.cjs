@@ -4,7 +4,7 @@ var discord_js = require('discord.js');
 var promises = require('fs/promises');
 var path = require('path');
 
-// discord-js-helpers - Discord.js helpers with zero config
+// discord-js-simplified - Discord.js helpers with zero config
 
 var FEATURE_INTENTS = {
   commands: [],
@@ -50,7 +50,7 @@ function createClient(options = {}) {
 async function diagnose(client) {
   const logger = client.__easierDjsLogger || createDefaultLogger();
   const features = client.__easierDjsFeatures || [];
-  logger.info("\u{1F50D} Running discord-js-helpers diagnostics...");
+  logger.info("\u{1F50D} Running discord-js-simplified diagnostics...");
   if (!client.isReady()) {
     logger.warn("\u26A0\uFE0F  Client is not ready yet. Some checks may be incomplete.");
   }
@@ -76,7 +76,7 @@ async function diagnose(client) {
   if (majorVersion >= 18) {
     logger.info(`\u2705 Node.js ${nodeVersion} (supported)`);
   } else {
-    logger.error(`\u274C Node.js ${nodeVersion} is too old. discord-js-helpers requires Node.js 18.17+`);
+    logger.error(`\u274C Node.js ${nodeVersion} is too old. discord-js-simplified requires Node.js 18.17+`);
   }
   logger.info("\u{1F3AF} Diagnostics complete!");
 }

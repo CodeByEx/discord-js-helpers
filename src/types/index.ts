@@ -14,7 +14,7 @@ export type Features = Array<
 >;
 
 /**
- * Minimal logger interface that discord-js-helpers expects
+ * Minimal logger interface that discord-js-simplified expects
  */
 export interface Logger {
   debug(message: string, ...args: unknown[]): void;
@@ -32,7 +32,7 @@ export interface CommandContext {
 }
 
 /**
- * Command definition structure for discord-js-helpers
+ * Command definition structure for discord-js-simplified
  */
 export interface CommandDefinition {
   /** The slash command builder from discord.js */

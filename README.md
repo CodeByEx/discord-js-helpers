@@ -1,4 +1,4 @@
-# discord-js-helpers
+# discord-js-simplified
 
 > Discord.js helpers with zero configuration
 
@@ -13,7 +13,7 @@ Production-ready: retry/backoff, sharding helpers, diagnostics, error middleware
 ### TypeScript
 
 ```typescript
-import { createClient, deploy, msg, btn, createCommandHandler } from 'discord-js-helpers';
+import { createClient, deploy, msg, btn, createCommandHandler } from 'discord-js-simplified';
 import { SlashCommandBuilder } from 'discord.js';
 
 const client = createClient({ features: ['commands', 'v2'] });
@@ -42,7 +42,7 @@ await client.login(process.env.DISCORD_TOKEN);
 ### JavaScript
 
 ```javascript
-import { createClient, deploy, msg, btn, createCommandHandler } from 'discord-js-helpers';
+import { createClient, deploy, msg, btn, createCommandHandler } from 'discord-js-simplified';
 import { SlashCommandBuilder } from 'discord.js';
 
 const client = createClient({ features: ['commands', 'v2'] });
@@ -105,7 +105,7 @@ const embed = embed()
 Create complex forms with predefined templates:
 
 ```typescript
-import { modalV2 } from 'discord-js-helpers';
+import { modalV2 } from 'discord-js-simplified';
 
 // Contact form
 const contactModal = modalV2.contact('contact_form');
@@ -136,7 +136,7 @@ await interaction.showModal(contactModal);
 Handle large datasets with built-in pagination:
 
 ```typescript
-import { createPagination } from 'discord-js-helpers';
+import { createPagination } from 'discord-js-simplified';
 
 const items = Array.from({ length: 100 }, (_, i) => ({
   title: `Item ${i + 1}`,
@@ -179,7 +179,7 @@ const message = msg()
 Create complex forms with validation:
 
 ```typescript
-import { createForm } from 'discord-js-helpers';
+import { createForm } from 'discord-js-simplified';
 
 const form = createForm([
   { 
@@ -275,7 +275,7 @@ createForm(fields: FormField[])              // Create custom form
 Convert existing v1 embeds to v2 format:
 
 ```typescript
-import { convertEmbed, migrateEmbeds } from 'discord-js-helpers';
+import { convertEmbed, migrateEmbeds } from 'discord-js-simplified';
 
 // Convert single embed
 const oldEmbed = new EmbedBuilder()

@@ -18,7 +18,7 @@ export interface RestOptions {
  * @example
  * ```typescript
  * import { REST } from 'discord.js';
- * import { wrapRest } from 'discord-js-helpers';
+ * import { wrapRest } from 'discord-js-simplified';
  * 
  * const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
  * const enhancedRest = wrapRest(rest, { maxRetries: 3, baseDelayMs: 1000 });

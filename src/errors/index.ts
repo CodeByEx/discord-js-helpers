@@ -2,7 +2,7 @@ import type { Client } from 'discord.js';
 import type { Logger } from '../types/index.js';
 
 /**
- * Base error class for discord-js-helpers errors
+ * Base error class for discord-js-simplified errors
  */
 export class EasierError extends Error {
   public code?: string;
@@ -60,14 +60,14 @@ export class RateLimitError extends EasierError {
  * 
  * @example
  * ```typescript
- * import { installInteractionErrorHandler } from 'discord-js-helpers';
+ * import { installInteractionErrorHandler } from 'discord-js-simplified';
  * 
  * installInteractionErrorHandler(client, logger);
  * ```
  * 
  * @example
  * ```javascript
- * const { installInteractionErrorHandler } = require('discord-js-helpers');
+ * const { installInteractionErrorHandler } = require('discord-js-simplified');
  * installInteractionErrorHandler(client);
  * ```
  */
@@ -190,7 +190,7 @@ function redactSensitiveInfo(error: unknown): unknown {
  * 
  * @example
  * ```typescript
- * import { createLogger } from 'discord-js-helpers';
+ * import { createLogger } from 'discord-js-simplified';
  * 
  * const logger = createLogger({ 
  *   level: 'info',

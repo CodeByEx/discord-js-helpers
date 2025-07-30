@@ -980,7 +980,7 @@ export const select = {
  * @example
  * ```typescript
  * import { EmbedBuilder } from 'discord.js';
- * import { convertEmbed } from 'discord-js-helpers';
+ * import { convertEmbed } from 'discord-js-simplified';
  * 
  * const oldEmbed = new EmbedBuilder()
  *   .setTitle('Title')

@@ -12,7 +12,7 @@ import type { Client, Message, GuildMember } from 'discord.js';
  * 
  * @example
  * ```typescript
- * import { getMessageSafe } from 'discord-js-helpers';
+ * import { getMessageSafe } from 'discord-js-simplified';
  * 
  * const message = await getMessageSafe(client, '123456789', '987654321');
  * if (message) {
@@ -44,7 +44,7 @@ export async function getMessageSafe(client: Client, channelId: string, messageI
  * 
  * @example
  * ```typescript
- * import { ensureGuildMember } from 'discord-js-helpers';
+ * import { ensureGuildMember } from 'discord-js-simplified';
  * 
  * const member = await ensureGuildMember(client, '123456789', '987654321');
  * if (member) {
@@ -71,7 +71,7 @@ export async function ensureGuildMember(client: Client, guildId: string, userId:
  * 
  * @example
  * ```typescript
- * import { memoryCache } from 'discord-js-helpers';
+ * import { memoryCache } from 'discord-js-simplified';
  * 
  * const cache = memoryCache();
  * await cache.set('user:123', { name: 'John', age: 25 }, 3600); // 1 hour TTL
@@ -124,7 +124,7 @@ export function memoryCache(): CacheAdapter {
  * 
  * @example
  * ```typescript
- * import { redisCache } from 'discord-js-helpers';
+ * import { redisCache } from 'discord-js-simplified';
  * 
  * const cache = redisCache('redis://localhost:6379');
  * await cache.set('session:123', { userId: '456' }, 1800); // 30 min TTL

@@ -28,7 +28,7 @@ export interface DeployOptions {
  * 
  * @example
  * ```typescript
- * import { loadCommands } from 'discord-js-helpers';
+ * import { loadCommands } from 'discord-js-simplified';
  * 
  * // Load from directory
  * const commands = loadCommands('./commands');
@@ -44,7 +44,7 @@ export interface DeployOptions {
  * 
  * @example
  * ```javascript
- * const { loadCommands } = require('discord-js-helpers');
+ * const { loadCommands } = require('discord-js-simplified');
  * const commands = loadCommands('./commands');
  * ```
  */
@@ -69,7 +69,7 @@ export function loadCommands(dirOrArray: string | CommandDefinition[]): CommandD
  * 
  * @example
  * ```typescript
- * import { loadCommandsAsync } from 'discord-js-helpers';
+ * import { loadCommandsAsync } from 'discord-js-simplified';
  * 
  * const commands = await loadCommandsAsync('./commands');
  * ```
@@ -125,7 +125,7 @@ export async function loadCommandsAsync(
  * 
  * @example
  * ```typescript
- * import { deploy, loadCommands } from 'discord-js-helpers';
+ * import { deploy, loadCommands } from 'discord-js-simplified';
  * 
  * const commands = loadCommands('./commands');
  * await deploy(client, commands, {
@@ -137,7 +137,7 @@ export async function loadCommandsAsync(
  * 
  * @example
  * ```javascript
- * const { deploy, loadCommands } = require('discord-js-helpers');
+ * const { deploy, loadCommands } = require('discord-js-simplified');
  * 
  * const commands = loadCommands([myCommand]);
  * await deploy(client, commands, { scope: 'guild', guildId: '123456789' });
@@ -285,7 +285,7 @@ function createDefaultLogger() {
  * 
  * @example
  * ```typescript
- * import { createCommandHandler } from 'discord-js-helpers';
+ * import { createCommandHandler } from 'discord-js-simplified';
  * 
  * const commands = loadCommands('./commands');
  * const handler = createCommandHandler(commands);
@@ -349,7 +349,7 @@ export function createCommandHandler(commands: CommandDefinition[], logger?: Log
  * 
  * @example
  * ```typescript
- * import { createPrefixCommandHandler } from 'discord-js-helpers';
+ * import { createPrefixCommandHandler } from 'discord-js-simplified';
  * 
  * const prefixCommands = [
  *   {

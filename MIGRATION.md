@@ -1,6 +1,6 @@
 # Migration Guide: From Discord.js v1 to v2 Components
 
-This guide helps you migrate from Discord.js v1 embeds and components to the new v2 components system using discord-js-helpers.
+This guide helps you migrate from Discord.js v1 embeds and components to the new v2 components system using discord-js-simplified.
 
 ## 🚀 Quick Migration
 
@@ -26,7 +26,7 @@ await interaction.reply({ embeds: [embed] });
 
 **After (v2):**
 ```typescript
-import { embed } from 'discord-js-helpers';
+import { embed } from 'discord-js-simplified';
 
 const embedMsg = embed()
   .title('Server Information')
@@ -60,7 +60,7 @@ await interaction.reply({ components: [row] });
 
 **After (v2):**
 ```typescript
-import { msg, btn } from 'discord-js-helpers';
+import { msg, btn } from 'discord-js-simplified';
 
 const message = msg()
   .text('Click the button below!')
@@ -94,7 +94,7 @@ import {
   select,
   modalV2,
   createPagination 
-} from 'discord-js-helpers';
+} from 'discord-js-simplified';
 ```
 
 ### 2. Convert EmbedBuilder to embed()
@@ -163,7 +163,7 @@ const modal = modalV2.create('form', 'Contact Form', [
 Use the built-in migration tools to convert existing embeds:
 
 ```typescript
-import { convertEmbed, migrateEmbeds } from 'discord-js-helpers';
+import { convertEmbed, migrateEmbeds } from 'discord-js-simplified';
 
 // Convert single embed
 const oldEmbed = new EmbedBuilder()
@@ -180,7 +180,7 @@ const newEmbeds = migrateEmbeds(oldEmbeds).map(e => e.build());
 ### Check if Migration is Needed
 
 ```typescript
-import { needsMigration, migrateMessage } from 'discord-js-helpers';
+import { needsMigration, migrateMessage } from 'discord-js-simplified';
 
 if (needsMigration(message)) {
   const newEmbeds = migrateMessage(message);
@@ -219,7 +219,7 @@ await interaction.showModal(customModal);
 ### Pagination
 
 ```typescript
-import { createPagination } from 'discord-js-helpers';
+import { createPagination } from 'discord-js-simplified';
 
 const items = Array.from({ length: 100 }, (_, i) => ({
   title: `Item ${i + 1}`,
