@@ -9,9 +9,9 @@ import {
   awaitModal,
   memoryCache,
   wrapRest
-} from 'discord-js-simplified';
+} from 'djs-helper-kit';
 import { SlashCommandBuilder, REST } from 'discord.js';
-import type { CommandDefinition, PrefixCommandDefinition } from 'discord-js-simplified';
+import type { CommandDefinition, PrefixCommandDefinition } from 'djs-helper-kit';
 
 // Create client with all features enabled
 const client = createClient({ 
@@ -151,7 +151,7 @@ const _enhancedRest = wrapRest(rest, {
 // Deploy commands and start bot
 async function main() {
   try {
-    console.log('🚀 Starting advanced discord-js-simplified example bot...');
+    console.log('🚀 Starting advanced djs-helper-kit example bot...');
     
     // Deploy slash commands
     await deploy(client, commands, {

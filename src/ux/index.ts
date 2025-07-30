@@ -66,7 +66,7 @@ export interface CollectOptions {
  * 
  * @example
  * ```typescript
- * import { confirm } from 'discord-js-simplified';
+ * import { confirm } from 'djs-helper-kit';
  * 
  * if (await confirm(interaction, "Delete this channel?")) {
  *   // User confirmed, proceed with deletion
@@ -76,7 +76,7 @@ export interface CollectOptions {
  * 
  * @example
  * ```javascript
- * const { confirm } = require('discord-js-simplified');
+ * const { confirm } = require('djs-helper-kit');
  * 
  * const confirmed = await confirm(interaction, "Are you sure?", {
  *   ephemeral: true,
@@ -165,7 +165,7 @@ export async function confirm(
  * 
  * @example
  * ```typescript
- * import { paginate } from 'discord-js-simplified';
+ * import { paginate } from 'djs-helper-kit';
  * 
  * const userList = guild.members.cache.map(m => m.user.tag);
  * await paginate(interaction, userList, { 
@@ -176,7 +176,7 @@ export async function confirm(
  * 
  * @example
  * ```javascript
- * const { paginate } = require('discord-js-simplified');
+ * const { paginate } = require('djs-helper-kit');
  * 
  * await paginate(interaction, items, {
  *   perPage: 5,
@@ -298,7 +298,7 @@ export async function paginate(
  * 
  * @example
  * ```typescript
- * import { collectButtons } from 'discord-js-simplified';
+ * import { collectButtons } from 'djs-helper-kit';
  * 
  * const interactions = await collectButtons(message, {
  *   filter: (i) => i.user.id === interaction.user.id,
@@ -378,7 +378,7 @@ export interface ModalField {
  * 
  * @example
  * ```typescript
- * import { modal } from 'discord-js-simplified';
+ * import { modal } from 'djs-helper-kit';
  * 
  * const form = modal('report', 'Report User', [
  *   { id: 'user', label: 'User ID', required: true },
@@ -432,7 +432,7 @@ export function modal(id: string, title: string, fields: ModalField[]): ModalBui
  * 
  * @example
  * ```typescript
- * import { modal, awaitModal } from 'discord-js-simplified';
+ * import { modal, awaitModal } from 'djs-helper-kit';
  * 
  * const form = modal('report', 'Report User', [
  *   { id: 'user', label: 'User ID', required: true },

@@ -1,6 +1,7 @@
 import { REST, Routes, Client, Message, ChatInputCommandInteraction } from 'discord.js';
 import { readdir, stat } from 'fs/promises';
 import { join, extname } from 'path';
+import { pathToFileURL } from 'url';
 import type { CommandDefinition, PrefixCommandDefinition, Logger } from '../types/index.js';
 
 /**
@@ -28,7 +29,7 @@ export interface DeployOptions {
  * 
  * @example
  * ```typescript
- * import { loadCommands } from 'discord-js-simplified';
+ * import { loadCommands } from 'djs-helper-kit';
  * 
  * // Load from directory
  * const commands = loadCommands('./commands');
@@ -44,7 +45,7 @@ export interface DeployOptions {
  * 
  * @example
  * ```javascript
- * const { loadCommands } = require('discord-js-simplified');
+ * const { loadCommands } = require('djs-helper-kit');
  * const commands = loadCommands('./commands');
  * ```
  */
@@ -69,7 +70,7 @@ export function loadCommands(dirOrArray: string | CommandDefinition[]): CommandD
  * 
  * @example
  * ```typescript
- * import { loadCommandsAsync } from 'discord-js-simplified';
+ * import { loadCommandsAsync } from 'djs-helper-kit';
  * 
  * const commands = await loadCommandsAsync('./commands');
  * ```
@@ -87,12 +88,20 @@ export async function loadCommandsAsync(
       const filePath = join(directory, file);
       const stats = await stat(filePath);
       
-      if (stats.isFile() && ['.js', '.ts', '.mjs'].includes(extname(file))) {
+      // Only load .js and .mjs files, skip configuration files
+      if (stats.isFile() && 
+          ['.js', '.mjs'].includes(extname(file)) && 
+          !file.startsWith('.') && 
+          !file.includes('config') && 
+          !file.includes('test-') && 
+          file !== 'index.js' && 
+          file !== 'index.mjs') {
         try {
           logger?.debug(`Loading command from ${file}`);
           
-          // Dynamic import (this would need proper path resolution in a real implementation)
-          const module = await import(filePath);
+          // Convert to proper file:// URL for ESM imports on Windows
+          const fileUrl = pathToFileURL(filePath);
+          const module = await import(fileUrl.href);
           
           // Look for default export or named exports that look like commands
           const possibleCommands = [
@@ -102,7 +111,19 @@ export async function loadCommandsAsync(
             )
           ].filter(Boolean);
           
-          commands.push(...possibleCommands as CommandDefinition[]);
+          // Validate command structure
+          const validCommands = possibleCommands.filter((cmd: unknown) => {
+            const command = cmd as Record<string, unknown>;
+            const data = command.data as Record<string, unknown>;
+            return command && 
+                   command.data && 
+                   typeof command.data === 'object' && 
+                   data.name && 
+                   command.run && 
+                   typeof command.run === 'function';
+          });
+          
+          commands.push(...validCommands as CommandDefinition[]);
         } catch (error) {
           logger?.error(`Failed to load command from ${file}:`, error);
         }
@@ -125,7 +146,7 @@ export async function loadCommandsAsync(
  * 
  * @example
  * ```typescript
- * import { deploy, loadCommands } from 'discord-js-simplified';
+ * import { deploy, loadCommands } from 'djs-helper-kit';
  * 
  * const commands = loadCommands('./commands');
  * await deploy(client, commands, {
@@ -137,7 +158,7 @@ export async function loadCommandsAsync(
  * 
  * @example
  * ```javascript
- * const { deploy, loadCommands } = require('discord-js-simplified');
+ * const { deploy, loadCommands } = require('djs-helper-kit');
  * 
  * const commands = loadCommands([myCommand]);
  * await deploy(client, commands, { scope: 'guild', guildId: '123456789' });
@@ -285,7 +306,7 @@ function createDefaultLogger() {
  * 
  * @example
  * ```typescript
- * import { createCommandHandler } from 'discord-js-simplified';
+ * import { createCommandHandler } from 'djs-helper-kit';
  * 
  * const commands = loadCommands('./commands');
  * const handler = createCommandHandler(commands);
@@ -349,7 +370,7 @@ export function createCommandHandler(commands: CommandDefinition[], logger?: Log
  * 
  * @example
  * ```typescript
- * import { createPrefixCommandHandler } from 'discord-js-simplified';
+ * import { createPrefixCommandHandler } from 'djs-helper-kit';
  * 
  * const prefixCommands = [
  *   {

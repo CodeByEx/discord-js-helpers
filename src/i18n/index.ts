@@ -23,7 +23,7 @@ export interface I18nInstance {
  * 
  * @example
  * ```typescript
- * import { createI18n } from 'discord-js-simplified';
+ * import { createI18n } from 'djs-helper-kit';
  * 
  * const i18n = createI18n({
  *   en: {
@@ -101,7 +101,7 @@ export function createI18n(locales: Dict, options: I18nOptions = {}): I18nInstan
  * 
  * @example
  * ```typescript
- * import { getUserLocale } from 'discord-js-simplified';
+ * import { getUserLocale } from 'djs-helper-kit';
  * 
  * const userLocale = getUserLocale(interaction.user);
  * const message = i18n.t('welcome', userLocale);

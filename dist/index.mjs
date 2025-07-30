@@ -1,8 +1,9 @@
 import { GatewayIntentBits, Client, REST, Routes, TextInputStyle, ModalBuilder, TextInputBuilder, ActionRowBuilder, ContainerBuilder, TextDisplayBuilder, MessageFlags, ButtonBuilder, ButtonStyle, ChannelSelectMenuBuilder, RoleSelectMenuBuilder, UserSelectMenuBuilder, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, ComponentType, ShardingManager } from 'discord.js';
 import { readdir, stat } from 'fs/promises';
 import { join, extname } from 'path';
+import { pathToFileURL } from 'url';
 
-// discord-js-simplified - Discord.js helpers with zero config
+// djs-helper-kit - Discord.js helpers with zero config
 
 var FEATURE_INTENTS = {
   commands: [],
@@ -48,7 +49,7 @@ function createClient(options = {}) {
 async function diagnose(client) {
   const logger = client.__easierDjsLogger || createDefaultLogger();
   const features = client.__easierDjsFeatures || [];
-  logger.info("\u{1F50D} Running discord-js-simplified diagnostics...");
+  logger.info("\u{1F50D} Running djs-helper-kit diagnostics...");
   if (!client.isReady()) {
     logger.warn("\u26A0\uFE0F  Client is not ready yet. Some checks may be incomplete.");
   }
@@ -74,7 +75,7 @@ async function diagnose(client) {
   if (majorVersion >= 18) {
     logger.info(`\u2705 Node.js ${nodeVersion} (supported)`);
   } else {
-    logger.error(`\u274C Node.js ${nodeVersion} is too old. discord-js-simplified requires Node.js 18.17+`);
+    logger.error(`\u274C Node.js ${nodeVersion} is too old. djs-helper-kit requires Node.js 18.17+`);
   }
   logger.info("\u{1F3AF} Diagnostics complete!");
 }
@@ -141,17 +142,23 @@ async function loadCommandsAsync(directory, logger) {
     for (const file of files) {
       const filePath = join(directory, file);
       const stats = await stat(filePath);
-      if (stats.isFile() && [".js", ".ts", ".mjs"].includes(extname(file))) {
+      if (stats.isFile() && [".js", ".mjs"].includes(extname(file)) && !file.startsWith(".") && !file.includes("config") && !file.includes("test-") && file !== "index.js" && file !== "index.mjs") {
         try {
           logger?.debug(`Loading command from ${file}`);
-          const module = await import(filePath);
+          const fileUrl = pathToFileURL(filePath);
+          const module = await import(fileUrl.href);
           const possibleCommands = [
             module.default,
             ...Object.values(module).filter(
               (exp) => exp && typeof exp === "object" && exp !== null && "data" in exp && "run" in exp
             )
           ].filter(Boolean);
-          commands.push(...possibleCommands);
+          const validCommands = possibleCommands.filter((cmd) => {
+            const command = cmd;
+            const data = command.data;
+            return command && command.data && typeof command.data === "object" && data.name && command.run && typeof command.run === "function";
+          });
+          commands.push(...validCommands);
         } catch (error) {
           logger?.error(`Failed to load command from ${file}:`, error);
         }

@@ -17,7 +17,7 @@ export default defineConfig({
   },
   esbuildOptions(options) {
     options.banner = {
-      js: '// discord-js-simplified - Discord.js helpers with zero config',
+      js: '// djs-helper-kit - Discord.js helpers with zero config',
     };
   },
 }); 

@@ -4,9 +4,9 @@ import {
   embed, 
   btn, 
   createCommandHandler
-} from 'discord-js-simplified';
+} from 'djs-helper-kit';
 import { SlashCommandBuilder } from 'discord.js';
-import type { CommandDefinition } from 'discord-js-simplified';
+import type { CommandDefinition } from 'djs-helper-kit';
 
 // Create client with automatic intent configuration
 const client = createClient({ 
@@ -97,7 +97,7 @@ client.on('interactionCreate', async (interaction) => {
 // Deploy commands and start bot
 async function main() {
   try {
-    console.log('🚀 Starting discord-js-simplified example bot...');
+    console.log('🚀 Starting djs-helper-kit example bot...');
     
     // Deploy commands (use guild for development, global for production)
     await deploy(client, commands, {
