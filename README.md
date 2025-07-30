@@ -71,7 +71,7 @@ deploy(client, commands, { scope: 'guild', guildId: process.env.DEV_GUILD_ID })
   .then(() => client.login(process.env.DISCORD_TOKEN));
 ```
 
-## ✅ What's Implemented (v0.1 MVP)
+## ✅ What's Implemented (v0.2)
 
 ### 🔧 Client & Diagnostics
 - `createClient()` - Automatic intent configuration based on features
@@ -80,6 +80,7 @@ deploy(client, commands, { scope: 'guild', guildId: process.env.DEV_GUILD_ID })
 ### 📋 Commands
 - `deploy()` - Smart command deployment with diff display
 - `createCommandHandler()` - Simple command routing with error handling
+- `createPrefixCommandHandler()` - Prefix command support with aliases
 - `loadCommands()` / `loadCommandsAsync()` - Command loading utilities
 
 ### 🎨 V2 Components
@@ -91,6 +92,18 @@ deploy(client, commands, { scope: 'guild', guildId: process.env.DEV_GUILD_ID })
 - `confirm()` - Yes/No confirmation dialogs with timeout
 - `paginate()` - Automatic pagination for large lists
 - `collectButtons()` - Component interaction collection
+- `modal()` - Schema-first modal builders
+- `awaitModal()` - Modal submission with parsed data
+
+### 🔄 REST Helpers
+- `wrapRest()` - Rate-limit-safe REST with retry logic
+- Exponential backoff with jitter for failed requests
+
+### 💾 Cache Adapters
+- `memoryCache()` - In-memory cache with TTL support
+- `redisCache()` - Redis cache adapter (stub)
+- `getMessageSafe()` - Safe message fetching
+- `ensureGuildMember()` - Safe member fetching
 
 ### 🛡️ Error Handling
 - `installInteractionErrorHandler()` - Auto error middleware
@@ -98,11 +111,6 @@ deploy(client, commands, { scope: 'guild', guildId: process.env.DEV_GUILD_ID })
 - Custom error classes with proper codes
 
 ## 🔜 Coming Soon
-
-### v0.2
-- ✏️ **Modals & Forms** - Schema-first modal builders
-- 🔄 **REST Helpers** - Rate-limit safe with retries  
-- 💾 **Cache Adapters** - Memory + Redis support
 
 ### v0.3  
 - 🌐 **Sharding** - Auto-scaling helpers
@@ -164,6 +172,43 @@ await paginate(interaction, longList, { perPage: 10 });
 
 // Button collection
 const clicks = await collectButtons(message, { time: 30000 });
+
+// Modal forms
+const form = modal('report', 'Report User', [
+  { id: 'user', label: 'User ID', required: true },
+  { id: 'reason', label: 'Reason', style: 'paragraph' }
+]);
+const data = await awaitModal(interaction, form);
+```
+
+### Prefix Commands
+
+```typescript
+const prefixCommands = [
+  {
+    name: 'ping',
+    aliases: ['p'],
+    description: 'Check bot latency',
+    run: async (message, args, ctx) => {
+      await message.reply('Pong!');
+    }
+  }
+];
+
+client.on('messageCreate', createPrefixCommandHandler(prefixCommands, '!'));
+```
+
+### Cache & REST
+
+```typescript
+// Cache
+const cache = memoryCache();
+await cache.set('key', value, 3600); // 1 hour TTL
+const data = await cache.get('key');
+
+// REST with retries
+const rest = new REST({ version: '10' }).setToken(token);
+const enhancedRest = wrapRest(rest, { maxRetries: 3 });
 ```
 
 ## 🏗️ Development

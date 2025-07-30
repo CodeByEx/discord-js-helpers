@@ -275,6 +275,40 @@ function createCommandHandler(commands, logger) {
     }
   };
 }
+function createPrefixCommandHandler(prefixCommands, prefix = "!", logger) {
+  const commandMap = /* @__PURE__ */ new Map();
+  for (const cmd of prefixCommands) {
+    commandMap.set(cmd.name, cmd);
+    if (cmd.aliases) {
+      for (const alias of cmd.aliases) {
+        commandMap.set(alias, cmd);
+      }
+    }
+  }
+  return async (message) => {
+    if (message.author.bot || !message.content.startsWith(prefix)) return;
+    const args = message.content.slice(prefix.length).trim().split(/ +/);
+    const commandName = args.shift()?.toLowerCase();
+    if (!commandName) return;
+    const command = commandMap.get(commandName);
+    if (!command) return;
+    const context = { client: message.client, logger: logger || createDefaultLogger2() };
+    try {
+      if (command.guard) {
+        const guardResult = await command.guard(message, args, context);
+        if (guardResult !== true) {
+          const errorMessage = typeof guardResult === "string" ? guardResult : "Access denied";
+          await message.reply(errorMessage);
+          return;
+        }
+      }
+      await command.run(message, args, context);
+    } catch (error) {
+      context.logger.error(`Error in prefix command ${commandName}:`, error);
+      await message.reply("An error occurred while executing this command.");
+    }
+  };
+}
 function card() {
   return new CardBuilderImpl();
 }
@@ -395,13 +429,13 @@ ${text}`);
     btn.secondary(noId, "No")
   );
   const response = confirmCard.withActions(actionRow);
-  response.flags = response.flags | (ephemeral ? discord_js.MessageFlags.Ephemeral : 0);
+  const flags = response.flags | (ephemeral ? discord_js.MessageFlags.Ephemeral : 0);
   let message;
   if (interaction.replied || interaction.deferred) {
-    const reply = await interaction.editReply(response);
+    const reply = await interaction.editReply({ components: response.components, flags });
     message = reply;
   } else {
-    const reply = await interaction.reply({ ...response, fetchReply: true });
+    const reply = await interaction.reply({ components: response.components, flags, fetchReply: true });
     message = reply;
   }
   try {
@@ -414,12 +448,14 @@ ${text}`);
     const resultCard = card().section(
       confirmed ? "\u2705 **Confirmed**\nAction will proceed." : "\u274C **Cancelled**\nNo action taken."
     );
-    await buttonInteraction.update(resultCard.withActions());
+    const resultResponse = resultCard.withActions();
+    await buttonInteraction.update({ components: resultResponse.components });
     return confirmed;
   } catch (error) {
     const timeoutCard = card().section("\u23F0 **Timed out**\nNo response received.");
     try {
-      await interaction.editReply(timeoutCard.withActions());
+      const timeoutResponse = timeoutCard.withActions();
+      await interaction.editReply({ components: timeoutResponse.components });
     } catch {
     }
     return false;
@@ -437,7 +473,8 @@ async function paginate(interaction, items, options = {}) {
     const emptyCard = card().section("\u{1F4ED} **No items to display**");
     const response = emptyCard.withActions();
     response.flags = response.flags | (ephemeral ? discord_js.MessageFlags.Ephemeral : 0);
-    await interaction.reply(response);
+    const responseData = response;
+    await interaction.reply({ components: responseData.components, flags: responseData.flags });
     return;
   }
   const totalPages = Math.ceil(items.length / perPage);
@@ -496,7 +533,8 @@ async function paginate(interaction, items, options = {}) {
         currentPage + 1,
         totalPages
       );
-      await interaction.editReply(timeoutCard.withActions());
+      const timeoutResponse = timeoutCard.withActions();
+      await interaction.editReply({ components: timeoutResponse.components });
     } catch {
     }
   });
@@ -529,11 +567,112 @@ function defaultPaginateRender(items, page, totalPages) {
 
 ${content}`).footer(`${items.length} items on this page`);
 }
+function modal(id, title, fields) {
+  const modal2 = new discord_js.ModalBuilder().setCustomId(id).setTitle(title);
+  const actionRows = [];
+  for (const field of fields) {
+    const input = new discord_js.TextInputBuilder().setCustomId(field.id).setLabel(field.label).setStyle(field.style === "paragraph" ? discord_js.TextInputStyle.Paragraph : discord_js.TextInputStyle.Short).setRequired(field.required ?? false);
+    if (field.maxLength) {
+      input.setMaxLength(field.maxLength);
+    }
+    if (field.placeholder) {
+      input.setPlaceholder(field.placeholder);
+    }
+    if (field.value) {
+      input.setValue(field.value);
+    }
+    const actionRow = new discord_js.ActionRowBuilder().addComponents(input);
+    actionRows.push(actionRow);
+  }
+  return modal2.addComponents(actionRows);
+}
+async function awaitModal(interaction, modal2, timeoutMs = 3e5) {
+  await interaction.showModal(modal2);
+  try {
+    const modalInteraction = await interaction.awaitModalSubmit({
+      filter: (i) => i.customId === modal2.data.custom_id && i.user.id === interaction.user.id,
+      time: timeoutMs
+    });
+    const data = {};
+    for (const component of modalInteraction.components) {
+      if (component.components[0]?.type === discord_js.ComponentType.TextInput) {
+        const input = component.components[0];
+        data[input.customId] = input.value;
+      }
+    }
+    return data;
+  } catch (error) {
+    throw new Error("Modal submission timed out or was cancelled");
+  }
+}
 
 // src/rest/index.ts
-function wrapRest(rest, opts) {
-  console.warn("wrapRest not yet implemented - coming in v0.2");
+function wrapRest(rest, options = {}) {
+  const {
+    maxRetries = 3,
+    baseDelayMs = 1e3,
+    logger = createDefaultLogger3()
+  } = options;
+  const originalPost = rest.post.bind(rest);
+  const originalPatch = rest.patch.bind(rest);
+  const originalDelete = rest.delete.bind(rest);
+  rest.post = async (route, options2) => {
+    return await retryWithBackoff(
+      () => originalPost(route, options2),
+      maxRetries,
+      baseDelayMs,
+      logger,
+      "POST"
+    );
+  };
+  rest.patch = async (route, options2) => {
+    return await retryWithBackoff(
+      () => originalPatch(route, options2),
+      maxRetries,
+      baseDelayMs,
+      logger,
+      "PATCH"
+    );
+  };
+  rest.delete = async (route, options2) => {
+    return await retryWithBackoff(
+      () => originalDelete(route, options2),
+      maxRetries,
+      baseDelayMs,
+      logger,
+      "DELETE"
+    );
+  };
   return rest;
+}
+async function retryWithBackoff(fn, maxRetries, baseDelayMs, logger, method) {
+  let lastError;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (error.code >= 400 && error.code < 500 && error.code !== 429) {
+        throw error;
+      }
+      if (attempt === maxRetries) {
+        logger.error(`Failed ${method} request after ${maxRetries} retries:`, error);
+        throw error;
+      }
+      const delay = baseDelayMs * Math.pow(2, attempt) + Math.random() * 250;
+      logger.warn(`${method} request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${Math.round(delay)}ms`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  throw lastError;
+}
+function createDefaultLogger3() {
+  return {
+    debug: (message, ...args) => console.debug(`[REST] ${message}`, ...args),
+    info: (message, ...args) => console.info(`[REST] ${message}`, ...args),
+    warn: (message, ...args) => console.warn(`[REST] ${message}`, ...args),
+    error: (message, ...args) => console.error(`[REST] ${message}`, ...args)
+  };
 }
 
 // src/perms/index.ts
@@ -562,15 +701,55 @@ async function shardHealth(manager) {
 
 // src/cache/index.ts
 async function getMessageSafe(client, channelId, messageId) {
-  console.warn("getMessageSafe not yet implemented - coming in v0.2");
-  return null;
+  try {
+    const channel = await client.channels.fetch(channelId);
+    if (!channel?.isTextBased()) return null;
+    const message = await channel.messages.fetch(messageId);
+    return message;
+  } catch (error) {
+    return null;
+  }
 }
 async function ensureGuildMember(client, guildId, userId) {
-  console.warn("ensureGuildMember not yet implemented - coming in v0.2");
-  return null;
+  try {
+    const guild = await client.guilds.fetch(guildId);
+    const member = await guild.members.fetch(userId);
+    return member;
+  } catch (error) {
+    return null;
+  }
 }
 function memoryCache() {
-  console.warn("memoryCache not yet implemented - coming in v0.2");
+  const store = /* @__PURE__ */ new Map();
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of store.entries()) {
+      if (entry.expires > 0 && entry.expires < now) {
+        store.delete(key);
+      }
+    }
+  }, 5 * 60 * 1e3);
+  return {
+    async get(key) {
+      const entry = store.get(key);
+      if (!entry) return null;
+      if (entry.expires > 0 && entry.expires < Date.now()) {
+        store.delete(key);
+        return null;
+      }
+      return entry.value;
+    },
+    async set(key, value, ttlSeconds) {
+      const expires = ttlSeconds ? Date.now() + ttlSeconds * 1e3 : 0;
+      store.set(key, { value, expires });
+    },
+    async del(key) {
+      store.delete(key);
+    }
+  };
+}
+function redisCache(url) {
+  console.warn('Redis cache adapter requires Redis client. Install "redis" or "ioredis" package.');
   return {
     async get() {
       return null;
@@ -597,7 +776,9 @@ var EasierError = class extends Error {
   constructor(message, code, cause) {
     super(message);
     this.name = "EasierError";
-    this.code = code;
+    if (code !== void 0) {
+      this.code = code;
+    }
     this.cause = cause;
   }
 };
@@ -621,7 +802,7 @@ var RateLimitError = class extends EasierError {
   }
 };
 function installInteractionErrorHandler(client, logger) {
-  const log = logger || createDefaultLogger3();
+  const log = logger || createDefaultLogger4();
   client.on("interactionCreate", async (interaction) => {
     if (!interaction.isRepliable()) return;
     const originalReply = interaction.reply.bind(interaction);
@@ -742,7 +923,7 @@ function createLogger(options = {}) {
     }
   };
 }
-function createDefaultLogger3() {
+function createDefaultLogger4() {
   return {
     debug: (message, ...args) => console.debug(`[DEBUG] ${message}`, ...args),
     info: (message, ...args) => console.info(`[INFO] ${message}`, ...args),
@@ -756,6 +937,7 @@ exports.EasierError = EasierError;
 exports.PermissionError = PermissionError;
 exports.RateLimitError = RateLimitError;
 exports.autoShard = autoShard;
+exports.awaitModal = awaitModal;
 exports.btn = btn;
 exports.canSend = canSend;
 exports.card = card;
@@ -766,6 +948,7 @@ exports.createClient = createClient;
 exports.createCommandHandler = createCommandHandler;
 exports.createI18n = createI18n;
 exports.createLogger = createLogger;
+exports.createPrefixCommandHandler = createPrefixCommandHandler;
 exports.deploy = deploy;
 exports.diagnose = diagnose;
 exports.ensureGuildMember = ensureGuildMember;
@@ -775,7 +958,9 @@ exports.installInteractionErrorHandler = installInteractionErrorHandler;
 exports.loadCommands = loadCommands;
 exports.loadCommandsAsync = loadCommandsAsync;
 exports.memoryCache = memoryCache;
+exports.modal = modal;
 exports.paginate = paginate;
+exports.redisCache = redisCache;
 exports.requireGuildAdmin = requireGuildAdmin;
 exports.shardHealth = shardHealth;
 exports.wrapRest = wrapRest;

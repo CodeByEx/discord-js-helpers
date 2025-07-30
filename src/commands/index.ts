@@ -1,7 +1,7 @@
-import { REST, Routes, Client } from 'discord.js';
+import { REST, Routes, Client, Message } from 'discord.js';
 import { readdir, stat } from 'fs/promises';
 import { join, extname } from 'path';
-import type { CommandDefinition, Logger } from '../types/index.js';
+import type { CommandDefinition, PrefixCommandDefinition, Logger } from '../types/index.js';
 
 /**
  * Options for deploying slash commands
@@ -332,6 +332,89 @@ export function createCommandHandler(commands: CommandDefinition[], logger?: Log
       } else {
         await interaction.reply({ content: errorMessage, ephemeral: true });
       }
+    }
+  };
+}
+
+/**
+ * Creates a prefix command handler for message events.
+ * Handles command parsing, guard checking, and error handling.
+ * 
+ * @param prefixCommands - Array of prefix command definitions
+ * @param prefix - Command prefix (default: '!')
+ * @param logger - Optional logger instance
+ * @returns Event handler function
+ * 
+ * @example
+ * ```typescript
+ * import { createPrefixCommandHandler } from 'easier-djs';
+ * 
+ * const prefixCommands = [
+ *   {
+ *     name: 'ping',
+ *     description: 'Ping command',
+ *     run: async (message, args, ctx) => {
+ *       await message.reply('Pong!');
+ *     }
+ *   }
+ * ];
+ * 
+ * const handler = createPrefixCommandHandler(prefixCommands, '!');
+ * client.on('messageCreate', handler);
+ * ```
+ */
+export function createPrefixCommandHandler(
+  prefixCommands: PrefixCommandDefinition[], 
+  prefix: string = '!',
+  logger?: Logger
+) {
+  const commandMap = new Map<string, PrefixCommandDefinition>();
+  
+  // Build command map with aliases
+  for (const cmd of prefixCommands) {
+    commandMap.set(cmd.name, cmd);
+    if (cmd.aliases) {
+      for (const alias of cmd.aliases) {
+        commandMap.set(alias, cmd);
+      }
+    }
+  }
+  
+  return async (message: Message) => {
+    // Ignore bot messages and messages that don't start with prefix
+    if (message.author.bot || !message.content.startsWith(prefix)) return;
+    
+    // Parse command and arguments
+    const args = message.content.slice(prefix.length).trim().split(/ +/);
+    const commandName = args.shift()?.toLowerCase();
+    
+    if (!commandName) return;
+    
+    const command = commandMap.get(commandName);
+    if (!command) return;
+    
+    const context = { client: message.client, logger: logger || createDefaultLogger() };
+    
+    try {
+      // Run guard if present
+      if (command.guard) {
+        const guardResult = await command.guard(message, args, context);
+        if (guardResult !== true) {
+          const errorMessage = typeof guardResult === 'string' 
+            ? guardResult 
+            : 'Access denied';
+          
+          await message.reply(errorMessage);
+          return;
+        }
+      }
+      
+      // Run the command
+      await command.run(message, args, context);
+      
+    } catch (error) {
+      context.logger.error(`Error in prefix command ${commandName}:`, error);
+      await message.reply('An error occurred while executing this command.');
     }
   };
 } 

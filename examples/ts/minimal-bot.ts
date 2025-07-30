@@ -24,7 +24,7 @@ const commands: CommandDefinition[] = [
       const ui = card()
         .color(0x5865f2)
         .section(`**${guild.name}**\n\nMembers: ${guild.memberCount}\nCreated: <t:${Math.floor(guild.createdTimestamp / 1000)}:R>`)
-        .thumb(guild.iconURL() || undefined)
+        .thumb(guild.iconURL() || 'https://cdn.discordapp.com/embed/avatars/0.png')
         .footer('Server information')
         .withActions(
           new ActionRowBuilder().addComponents(
@@ -33,7 +33,10 @@ const commands: CommandDefinition[] = [
           )
         );
 
-      await interaction.reply(ui);
+      await interaction.reply({ 
+        components: ui.components,
+        flags: ui.flags as any
+      });
     }
   },
   {
@@ -54,7 +57,11 @@ const commands: CommandDefinition[] = [
         .section(`🏓 **Pong!**\n\nLatency: ${latency}ms\nWebSocket: ${wsLatency}ms`)
         .footer('Bot latency check');
       
-      await interaction.editReply(ui.withActions());
+      const response = ui.withActions();
+      await interaction.editReply({ 
+        components: response.components,
+        flags: response.flags as any
+      });
     }
   }
 ];

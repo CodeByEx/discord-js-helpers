@@ -11,7 +11,9 @@ export class EasierError extends Error {
   constructor(message: string, code?: string, cause?: unknown) {
     super(message);
     this.name = 'EasierError';
-    this.code = code;
+    if (code !== undefined) {
+      this.code = code;
+    }
     this.cause = cause;
   }
 }

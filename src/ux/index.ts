@@ -10,7 +10,10 @@ import {
   ChatInputCommandInteraction,
   ButtonInteraction,
   StringSelectMenuInteraction,
-  ModalSubmitInteraction
+  ModalSubmitInteraction,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle
 } from 'discord.js';
 import type { Interaction } from 'discord.js';
 import { card, btn } from '../v2/index.js';
@@ -110,15 +113,15 @@ export async function confirm(
   );
 
   const response = confirmCard.withActions(actionRow);
-  response.flags = response.flags | (ephemeral ? MessageFlags.Ephemeral : 0);
+  const flags = response.flags | (ephemeral ? MessageFlags.Ephemeral : 0);
 
   // Send the confirmation message
   let message: Message;
   if (interaction.replied || interaction.deferred) {
-    const reply = await interaction.editReply(response);
+    const reply = await interaction.editReply({ components: response.components, flags });
     message = reply as Message;
   } else {
-    const reply = await interaction.reply({ ...response, fetchReply: true });
+    const reply = await interaction.reply({ components: response.components, flags, fetchReply: true });
     message = reply as Message;
   }
 
@@ -139,7 +142,8 @@ export async function confirm(
         : '❌ **Cancelled**\nNo action taken.'
     );
 
-    await buttonInteraction.update(resultCard.withActions());
+    const resultResponse = resultCard.withActions();
+    await buttonInteraction.update({ components: resultResponse.components });
     
     return confirmed;
   } catch (error) {
@@ -147,7 +151,8 @@ export async function confirm(
     const timeoutCard = card().section('⏰ **Timed out**\nNo response received.');
     
     try {
-      await interaction.editReply(timeoutCard.withActions());
+      const timeoutResponse = timeoutCard.withActions();
+      await interaction.editReply({ components: timeoutResponse.components });
     } catch {
       // Ignore edit errors (interaction might be expired)
     }
@@ -202,7 +207,8 @@ export async function paginate(
     const response = emptyCard.withActions();
     response.flags = response.flags | (ephemeral ? MessageFlags.Ephemeral : 0);
     
-    await interaction.reply(response);
+    const responseData = response;
+    await interaction.reply({ components: responseData.components, flags: responseData.flags as any });
     return;
   }
 
@@ -281,7 +287,8 @@ export async function paginate(
         totalPages
       );
       
-      await interaction.editReply(timeoutCard.withActions());
+             const timeoutResponse = timeoutCard.withActions();
+       await interaction.editReply({ components: timeoutResponse.components });
     } catch {
       // Ignore edit errors
     }
@@ -344,4 +351,128 @@ function defaultPaginateRender(items: string[], page: number, totalPages: number
   return card()
     .section(`📄 **Page ${page} of ${totalPages}**\n\n${content}`)
     .footer(`${items.length} items on this page`);
+}
+
+/**
+ * Field definition for modal forms
+ */
+export interface ModalField {
+  /** Unique identifier for the field */
+  id: string;
+  /** Display label for the field */
+  label: string;
+  /** Input style - short or paragraph */
+  style?: 'short' | 'paragraph';
+  /** Whether the field is required */
+  required?: boolean;
+  /** Maximum character length */
+  maxLength?: number;
+  /** Placeholder text */
+  placeholder?: string;
+  /** Default value */
+  value?: string;
+}
+
+/**
+ * Creates a modal builder with predefined fields.
+ * Simplifies modal creation with a schema-first approach.
+ * 
+ * @param id - Modal custom ID
+ * @param title - Modal title
+ * @param fields - Array of field definitions
+ * @returns ModalBuilder instance
+ * 
+ * @example
+ * ```typescript
+ * import { modal } from 'easier-djs';
+ * 
+ * const form = modal('report', 'Report User', [
+ *   { id: 'user', label: 'User ID', required: true },
+ *   { id: 'reason', label: 'Reason', style: 'paragraph', maxLength: 1000 }
+ * ]);
+ * 
+ * await interaction.showModal(form);
+ * ```
+ */
+export function modal(id: string, title: string, fields: ModalField[]): ModalBuilder {
+  const modal = new ModalBuilder()
+    .setCustomId(id)
+    .setTitle(title);
+
+  const actionRows: ActionRowBuilder<TextInputBuilder>[] = [];
+
+  for (const field of fields) {
+    const input = new TextInputBuilder()
+      .setCustomId(field.id)
+      .setLabel(field.label)
+      .setStyle(field.style === 'paragraph' ? TextInputStyle.Paragraph : TextInputStyle.Short)
+      .setRequired(field.required ?? false);
+
+    if (field.maxLength) {
+      input.setMaxLength(field.maxLength);
+    }
+
+    if (field.placeholder) {
+      input.setPlaceholder(field.placeholder);
+    }
+
+    if (field.value) {
+      input.setValue(field.value);
+    }
+
+    const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(input);
+    actionRows.push(actionRow);
+  }
+
+  return modal.addComponents(actionRows);
+}
+
+/**
+ * Waits for a modal submission and returns parsed data.
+ * Handles timeout and provides type-safe field access.
+ * 
+ * @param interaction - Command interaction to show modal on
+ * @param modal - Modal builder to show
+ * @param timeoutMs - Timeout in milliseconds (default: 300000 / 5 minutes)
+ * @returns Promise resolving to parsed modal data
+ * 
+ * @example
+ * ```typescript
+ * import { modal, awaitModal } from 'easier-djs';
+ * 
+ * const form = modal('report', 'Report User', [
+ *   { id: 'user', label: 'User ID', required: true },
+ *   { id: 'reason', label: 'Reason', style: 'paragraph' }
+ * ]);
+ * 
+ * const data = await awaitModal(interaction, form);
+ * await interaction.followUp(`Reported ${data.user} for: ${data.reason}`);
+ * ```
+ */
+export async function awaitModal(
+  interaction: ChatInputCommandInteraction,
+  modal: ModalBuilder,
+  timeoutMs: number = 300000
+): Promise<Record<string, string>> {
+  await interaction.showModal(modal);
+
+  try {
+    const modalInteraction = await interaction.awaitModalSubmit({
+      filter: (i) => i.customId === modal.data.custom_id && i.user.id === interaction.user.id,
+      time: timeoutMs
+    });
+
+    const data: Record<string, string> = {};
+    
+    for (const component of modalInteraction.components) {
+      if (component.components[0]?.type === ComponentType.TextInput) {
+        const input = component.components[0];
+        data[input.customId] = input.value;
+      }
+    }
+
+    return data;
+  } catch (error) {
+    throw new Error('Modal submission timed out or was cancelled');
+  }
 } 
