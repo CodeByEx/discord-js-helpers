@@ -120,7 +120,7 @@ export async function shardHealth(client: Client): Promise<ShardHealth> {
  * });
  * ```
  */
-export async function broadcastToShards(client: Client, message: any): Promise<any[]> {
+export async function broadcastToShards(client: Client, message: unknown): Promise<unknown[]> {
   // For single shard, just emit the event
   client.emit('broadcast', message);
   return [true];
@@ -142,9 +142,9 @@ export async function getTotalGuildCount(client: Client): Promise<number> {
  */
 function createDefaultLogger(): Logger {
   return {
-    debug: (message: string, ...args: any[]) => console.debug(`[SHARD] ${message}`, ...args),
-    info: (message: string, ...args: any[]) => console.info(`[SHARD] ${message}`, ...args),
-    warn: (message: string, ...args: any[]) => console.warn(`[SHARD] ${message}`, ...args),
-    error: (message: string, ...args: any[]) => console.error(`[SHARD] ${message}`, ...args),
+    debug: (message: string, ...args: unknown[]) => console.debug(`[SHARD] ${message}`, ...args),
+    info: (message: string, ...args: unknown[]) => console.info(`[SHARD] ${message}`, ...args),
+    warn: (message: string, ...args: unknown[]) => console.warn(`[SHARD] ${message}`, ...args),
+    error: (message: string, ...args: unknown[]) => console.error(`[SHARD] ${message}`, ...args),
   };
 } 

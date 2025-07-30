@@ -1,4 +1,4 @@
-import { REST, RESTPostAPIChannelMessageJSONBody, RESTPatchAPIChannelMessageJSONBody } from 'discord.js';
+import { REST } from 'discord.js';
 import type { Logger } from '../types/index.js';
 
 export interface RestOptions {
@@ -37,9 +37,9 @@ export function wrapRest(rest: REST, options: RestOptions = {}): REST {
   const originalDelete = rest.delete.bind(rest);
 
   // Enhanced POST with retry logic
-  rest.post = async (route: any, options?: any) => {
+  rest.post = async (route: unknown, options?: unknown) => {
     return await retryWithBackoff(
-      () => originalPost(route, options),
+      () => originalPost(route as `/${string}`, options as Record<string, unknown>),
       maxRetries,
       baseDelayMs,
       logger,
@@ -48,9 +48,9 @@ export function wrapRest(rest: REST, options: RestOptions = {}): REST {
   };
 
   // Enhanced PATCH with retry logic
-  rest.patch = async (route: any, options?: any) => {
+  rest.patch = async (route: unknown, options?: unknown) => {
     return await retryWithBackoff(
-      () => originalPatch(route, options),
+      () => originalPatch(route as `/${string}`, options as Record<string, unknown>),
       maxRetries,
       baseDelayMs,
       logger,
@@ -59,9 +59,9 @@ export function wrapRest(rest: REST, options: RestOptions = {}): REST {
   };
 
   // Enhanced DELETE with retry logic
-  rest.delete = async (route: any, options?: any) => {
+  rest.delete = async (route: unknown, options?: unknown) => {
     return await retryWithBackoff(
-      () => originalDelete(route, options),
+      () => originalDelete(route as `/${string}`, options as Record<string, unknown>),
       maxRetries,
       baseDelayMs,
       logger,
@@ -76,22 +76,23 @@ export function wrapRest(rest: REST, options: RestOptions = {}): REST {
  * Retry function with exponential backoff and jitter
  */
 async function retryWithBackoff(
-  fn: () => Promise<any>,
+  fn: () => Promise<unknown>,
   maxRetries: number,
   baseDelayMs: number,
   logger: Logger,
   method: string
-): Promise<any> {
-  let lastError: any;
+): Promise<unknown> {
+  let lastError: unknown;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
-    } catch (error: any) {
+    } catch (error: unknown) {
       lastError = error;
 
       // Don't retry on client errors (4xx) except 429
-      if (error.code >= 400 && error.code < 500 && error.code !== 429) {
+      const errorObj = error as Record<string, unknown>;
+      if (typeof errorObj.code === 'number' && errorObj.code >= 400 && errorObj.code < 500 && errorObj.code !== 429) {
         throw error;
       }
 
@@ -118,9 +119,9 @@ async function retryWithBackoff(
  */
 function createDefaultLogger(): Logger {
   return {
-    debug: (message: string, ...args: any[]) => console.debug(`[REST] ${message}`, ...args),
-    info: (message: string, ...args: any[]) => console.info(`[REST] ${message}`, ...args),
-    warn: (message: string, ...args: any[]) => console.warn(`[REST] ${message}`, ...args),
-    error: (message: string, ...args: any[]) => console.error(`[REST] ${message}`, ...args),
+    debug: (message: string, ...args: unknown[]) => console.debug(`[REST] ${message}`, ...args),
+    info: (message: string, ...args: unknown[]) => console.info(`[REST] ${message}`, ...args),
+    warn: (message: string, ...args: unknown[]) => console.warn(`[REST] ${message}`, ...args),
+    error: (message: string, ...args: unknown[]) => console.error(`[REST] ${message}`, ...args),
   };
 } 

@@ -1,10 +1,18 @@
 {
   "name": "discord-js-helpers",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Drop-in Discord.js helpers: zero-config client setup, V2 cards, deploy tools, UX primitives. TypeScript-first with JS-friendly JSDoc.",
-  "author": "Your Name",
+  "author": "edinlol",
   "license": "MIT",
-  "keywords": ["discord", "discord.js", "bot", "typescript", "javascript", "v2", "components"],
+  "keywords": [
+    "discord",
+    "discord.js",
+    "bot",
+    "typescript",
+    "javascript",
+    "v2",
+    "components"
+  ],
   "homepage": "https://github.com/CodeByEx/discord-js-helpers#readme",
   "repository": {
     "type": "git",
@@ -36,15 +44,15 @@
     "discord.js": "^14.19.0 || ^14.20.0 || ^14.x"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
-    "discord.js": "^14.20.0",
-    "tsup": "^8.0.0",
-    "typescript": "^5.3.0",
-    "vitest": "^1.2.0",
-    "eslint": "^8.56.0",
-    "@typescript-eslint/eslint-plugin": "^6.19.0",
-    "@typescript-eslint/parser": "^6.19.0",
-    "prettier": "^3.2.0"
+    "@types/node": "^24.1.0",
+    "@typescript-eslint/eslint-plugin": "^8.38.0",
+    "@typescript-eslint/parser": "^8.38.0",
+    "discord.js": "^14.21.0",
+    "eslint": "^9.32.0",
+    "prettier": "^3.6.2",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   },
   "scripts": {
     "build": "tsup",
@@ -62,4 +70,4 @@
     "postversion": "git push --follow-tags"
   },
   "sideEffects": false
-} 
+}

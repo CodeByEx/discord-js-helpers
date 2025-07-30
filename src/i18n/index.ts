@@ -7,7 +7,7 @@ export interface I18nOptions {
 }
 
 export interface I18nInstance {
-  t(key: string, locale?: string, params?: Record<string, any>): string;
+  t(key: string, locale?: string, params?: Record<string, unknown>): string;
   locale: string;
   setLocale(locale: string): void;
   has(key: string, locale?: string): boolean;
@@ -48,7 +48,7 @@ export function createI18n(locales: Dict, options: I18nOptions = {}): I18nInstan
 
   let currentLocale = defaultLocale;
 
-  function interpolate(text: string, params: Record<string, any> = {}): string {
+  function interpolate(text: string, params: Record<string, unknown> = {}): string {
     return text.replace(/\{(\w+)\}/g, (match, key) => {
       return params[key]?.toString() || match;
     });
@@ -64,7 +64,7 @@ export function createI18n(locales: Dict, options: I18nOptions = {}): I18nInstan
   }
 
   return {
-    t(key: string, locale?: string, params?: Record<string, any>): string {
+    t(key: string, locale?: string, params?: Record<string, unknown>): string {
       const translation = getTranslation(key, locale);
       if (!translation) {
         logger.warn(`Translation key '${key}' not found for locale '${locale || currentLocale}'`);
@@ -107,9 +107,8 @@ export function createI18n(locales: Dict, options: I18nOptions = {}): I18nInstan
  * const message = i18n.t('welcome', userLocale);
  * ```
  */
-export function getUserLocale(user: any): string {
-  // Discord.js doesn't expose user locale directly
-  // This is a placeholder for future implementation
+export function getUserLocale(_user: unknown): string {
+  // In a real implementation, this would check user preferences
   return 'en';
 }
 
@@ -145,9 +144,9 @@ export function formatDate(
  */
 function createDefaultLogger(): Logger {
   return {
-    debug: (message: string, ...args: any[]) => console.debug(`[I18N] ${message}`, ...args),
-    info: (message: string, ...args: any[]) => console.info(`[I18N] ${message}`, ...args),
-    warn: (message: string, ...args: any[]) => console.warn(`[I18N] ${message}`, ...args),
-    error: (message: string, ...args: any[]) => console.error(`[I18N] ${message}`, ...args),
+    debug: (message: string, ...args: unknown[]) => console.debug(`[I18N] ${message}`, ...args),
+    info: (message: string, ...args: unknown[]) => console.info(`[I18N] ${message}`, ...args),
+    warn: (message: string, ...args: unknown[]) => console.warn(`[I18N] ${message}`, ...args),
+    error: (message: string, ...args: unknown[]) => console.error(`[I18N] ${message}`, ...args),
   };
 } 

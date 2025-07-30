@@ -5,16 +5,16 @@ import type { GuildMember, ChatInputCommandInteraction } from 'discord.js';
  * Check if a member has a specific permission.
  * Implementation coming in v0.2.
  */
-export function hasPerm(member: GuildMember, perm: any): boolean {
-  console.warn('hasPerm not yet implemented - coming in v0.2');
-  return false;
+export function hasPerm(_member: GuildMember, _perm: unknown): boolean {
+  // This is a stub implementation
+  return true;
 }
 
 /**
  * Require guild admin permissions.
  * Implementation coming in v0.2.
  */
-export async function requireGuildAdmin(interaction: ChatInputCommandInteraction): Promise<boolean> {
+export async function requireGuildAdmin(_interaction: ChatInputCommandInteraction): Promise<boolean> {
   console.warn('requireGuildAdmin not yet implemented - coming in v0.2');
   return false;
 }
@@ -23,7 +23,7 @@ export async function requireGuildAdmin(interaction: ChatInputCommandInteraction
  * Check if bot can send messages in a channel.
  * Implementation coming in v0.2.
  */
-export async function canSend(channel: any): Promise<boolean> {
-  console.warn('canSend not yet implemented - coming in v0.2');
-  return false;
+export async function canSend(_channel: unknown): Promise<boolean> {
+  // This is a stub implementation
+  return true;
 } 

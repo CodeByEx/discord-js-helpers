@@ -1,4 +1,4 @@
-import type { Client, ChatInputCommandInteraction, SlashCommandBuilder, GuildMember, Message } from 'discord.js';
+import type { Client, ChatInputCommandInteraction, SlashCommandBuilder, Message } from 'discord.js';
 
 /**
  * Features that can be enabled in createClient to automatically configure intents
@@ -17,10 +17,10 @@ export type Features = Array<
  * Minimal logger interface that discord-js-helpers expects
  */
 export interface Logger {
-  debug(message: string, ...args: any[]): void;
-  info(message: string, ...args: any[]): void;
-  warn(message: string, ...args: any[]): void;
-  error(message: string, ...args: any[]): void;
+  debug(message: string, ...args: unknown[]): void;
+  info(message: string, ...args: unknown[]): void;
+  warn(message: string, ...args: unknown[]): void;
+  error(message: string, ...args: unknown[]): void;
 }
 
 /**
@@ -38,7 +38,7 @@ export interface CommandDefinition {
   /** The slash command builder from discord.js */
   data: SlashCommandBuilder;
   /** The command handler function */
-  run: (interaction: ChatInputCommandInteraction, ctx: CommandContext) => Promise<any>;
+  run: (interaction: ChatInputCommandInteraction, ctx: CommandContext) => Promise<unknown>;
   /** Optional guard function that runs before the command */
   guard?: (interaction: ChatInputCommandInteraction, ctx: CommandContext) => Promise<boolean | string>;
 }
@@ -54,7 +54,7 @@ export interface PrefixCommandDefinition {
   /** Command description */
   description?: string;
   /** The command handler function */
-  run: (message: Message, args: string[], ctx: CommandContext) => Promise<any>;
+  run: (message: Message, args: string[], ctx: CommandContext) => Promise<unknown>;
   /** Optional guard function that runs before the command */
   guard?: (message: Message, args: string[], ctx: CommandContext) => Promise<boolean | string>;
   /** Whether this command should be hidden from help */

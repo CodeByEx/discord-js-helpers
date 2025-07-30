@@ -75,8 +75,8 @@ export function createClient(options: CreateClientOptions = {}): Client {
   }
 
   // Add feature tracking for diagnostics
-  (client as any).__easierDjsFeatures = features;
-  (client as any).__easierDjsLogger = logger;
+  (client as { __easierDjsFeatures?: Features; __easierDjsLogger?: Logger }).__easierDjsFeatures = features;
+  (client as { __easierDjsFeatures?: Features; __easierDjsLogger?: Logger }).__easierDjsLogger = logger;
 
   return client;
 }
@@ -104,8 +104,8 @@ export function createClient(options: CreateClientOptions = {}): Client {
  * ```
  */
 export async function diagnose(client: Client): Promise<void> {
-  const logger = (client as any).__easierDjsLogger || createDefaultLogger();
-  const features = (client as any).__easierDjsFeatures || [];
+  const logger = (client as { __easierDjsLogger?: Logger }).__easierDjsLogger || createDefaultLogger();
+  const features = (client as { __easierDjsFeatures?: Features }).__easierDjsFeatures || [];
   
   logger.info('🔍 Running discord-js-helpers diagnostics...');
   
@@ -222,9 +222,9 @@ function installErrorHandling(client: Client, logger: Logger): void {
  */
 function createDefaultLogger(): Logger {
   return {
-    debug: (message: string, ...args: any[]) => console.debug(`[DEBUG] ${message}`, ...args),
-    info: (message: string, ...args: any[]) => console.info(`[INFO] ${message}`, ...args),
-    warn: (message: string, ...args: any[]) => console.warn(`[WARN] ${message}`, ...args),
-    error: (message: string, ...args: any[]) => console.error(`[ERROR] ${message}`, ...args),
+    debug: (message: string, ...args: unknown[]) => console.debug(`[DEBUG] ${message}`, ...args),
+    info: (message: string, ...args: unknown[]) => console.info(`[INFO] ${message}`, ...args),
+    warn: (message: string, ...args: unknown[]) => console.warn(`[WARN] ${message}`, ...args),
+    error: (message: string, ...args: unknown[]) => console.error(`[ERROR] ${message}`, ...args),
   };
 } 

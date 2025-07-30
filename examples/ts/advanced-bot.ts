@@ -1,7 +1,6 @@
 import { 
   createClient, 
   deploy, 
-  msg, 
   embed, 
   btn, 
   createCommandHandler, 
@@ -11,7 +10,7 @@ import {
   memoryCache,
   wrapRest
 } from 'discord-js-helpers';
-import { SlashCommandBuilder, ActionRowBuilder, REST } from 'discord.js';
+import { SlashCommandBuilder, REST } from 'discord.js';
 import type { CommandDefinition, PrefixCommandDefinition } from 'discord-js-helpers';
 
 // Create client with all features enabled
@@ -50,13 +49,13 @@ const commands: CommandDefinition[] = [
         await interaction.followUp({ content: 'Report submitted successfully!', ephemeral: true });
         const response = ui.buttons(btn.primary('Close', 'close')).build();
         if (interaction.channel?.isTextBased() && 'send' in interaction.channel) {
-          await (interaction.channel as any).send({ 
+          await (interaction.channel as unknown as { send: Function }).send({ 
             components: response.components,
-            flags: response.flags as any
+            flags: response.flags as number
           });
         }
         
-      } catch (error) {
+      } catch {
         await interaction.followUp({ content: 'Report submission was cancelled or timed out.', ephemeral: true });
       }
     }
@@ -81,7 +80,7 @@ const commands: CommandDefinition[] = [
       const response = ui.buttons(btn.primary('Close', 'close')).build();
       await interaction.reply({ 
         components: response.components,
-        flags: response.flags as any
+        flags: response.flags as number
       });
     }
   }
@@ -132,7 +131,7 @@ const prefixCommands: PrefixCommandDefinition[] = [
       const response = ui.buttons(btn.primary('Close', 'close')).build();
       await message.reply({ 
         components: response.components,
-        flags: response.flags as any
+        flags: response.flags as number
       });
     }
   }
@@ -144,7 +143,7 @@ client.on('messageCreate', createPrefixCommandHandler(prefixCommands, '!'));
 
 // Enhanced REST with retry logic
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);
-const enhancedRest = wrapRest(rest, { 
+const _enhancedRest = wrapRest(rest, { 
   maxRetries: 3, 
   baseDelayMs: 1000 
 });

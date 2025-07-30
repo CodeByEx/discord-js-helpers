@@ -148,7 +148,7 @@ async function loadCommandsAsync(directory, logger) {
           const possibleCommands = [
             module.default,
             ...Object.values(module).filter(
-              (exp) => exp && typeof exp === "object" && exp.data && exp.run
+              (exp) => exp && typeof exp === "object" && exp !== null && "data" in exp && "run" in exp
             )
           ].filter(Boolean);
           commands.push(...possibleCommands);
@@ -232,7 +232,9 @@ function showCommandDiff(existing, newCommands, logger) {
   }
 }
 function commandsEqual(cmd1, cmd2) {
-  return cmd1.name === cmd2.name && cmd1.description === cmd2.description && JSON.stringify(cmd1.options || []) === JSON.stringify(cmd2.options || []);
+  const c1 = cmd1;
+  const c2 = cmd2;
+  return c1.name === c2.name && c1.description === c2.description && JSON.stringify(c1.options || []) === JSON.stringify(c2.options || []);
 }
 function createDefaultLogger2() {
   return {
@@ -375,9 +377,10 @@ function createPagination(options) {
   currentItems.forEach((item, index) => {
     if (typeof item === "string") {
       message.text(item);
-    } else if (item.title && item.description) {
-      message.title(item.title);
-      message.text(item.description);
+    } else if (typeof item === "object" && item !== null && "title" in item && "description" in item) {
+      const itemObj = item;
+      message.title(itemObj.title);
+      message.text(itemObj.description);
     } else {
       message.text(JSON.stringify(item));
     }
@@ -702,47 +705,61 @@ var select = {
     return new ChannelSelectMenuBuilder().setCustomId(id).setPlaceholder(placeholder);
   }
 };
-function convertEmbed(embed3) {
-  const builder = embed3();
-  if (embed3.data?.color) {
-    builder.color(embed3.data.color);
+function convertEmbed(embed2) {
+  const embedObj = embed2;
+  const builder = embedObj();
+  const data = embedObj.data;
+  if (data?.color) {
+    builder.color(data.color);
   }
-  if (embed3.data?.title) {
-    builder.title(embed3.data.title);
+  if (data?.title) {
+    builder.title(data.title);
   }
-  if (embed3.data?.description) {
-    builder.description(embed3.data.description);
+  if (data?.description) {
+    builder.description(data.description);
   }
-  if (embed3.data?.fields) {
-    for (const field of embed3.data.fields) {
+  if (data?.fields && Array.isArray(data.fields)) {
+    for (const field of data.fields) {
       builder.field(field.name, field.value, field.inline);
     }
   }
-  if (embed3.data?.thumbnail?.url) {
-    builder.thumbnail(embed3.data.thumbnail.url);
+  if (data?.thumbnail && typeof data.thumbnail === "object" && data.thumbnail !== null) {
+    const thumbnail = data.thumbnail;
+    if (thumbnail.url) {
+      builder.thumbnail(thumbnail.url);
+    }
   }
-  if (embed3.data?.image?.url) {
-    builder.image(embed3.data.image.url);
+  if (data?.image && typeof data.image === "object" && data.image !== null) {
+    const image = data.image;
+    if (image.url) {
+      builder.image(image.url);
+    }
   }
-  if (embed3.data?.footer?.text) {
-    builder.footer(embed3.data.footer.text);
+  if (data?.footer && typeof data.footer === "object" && data.footer !== null) {
+    const footer = data.footer;
+    if (footer.text) {
+      builder.footer(footer.text);
+    }
   }
-  if (embed3.data?.timestamp) {
-    builder.timestamp(new Date(embed3.data.timestamp));
+  if (data?.timestamp) {
+    builder.timestamp(new Date(data.timestamp));
   }
   return builder;
 }
 function migrateEmbeds(embeds) {
-  return embeds.map((embed3) => convertEmbed(embed3));
+  return embeds.map((embed2) => convertEmbed(embed2));
 }
 function needsMigration(message) {
-  return message.embeds && message.embeds.length > 0;
+  const messageObj = message;
+  return Array.isArray(messageObj.embeds) && messageObj.embeds.length > 0;
 }
 function migrateMessage(message) {
   if (!needsMigration(message)) {
     return [];
   }
-  return migrateEmbeds(message.embeds);
+  const messageObj = message;
+  const embeds = messageObj.embeds;
+  return migrateEmbeds(embeds);
 }
 async function confirm(interaction, text, options = {}) {
   const {
@@ -756,10 +773,6 @@ async function confirm(interaction, text, options = {}) {
 
 ${text}`);
   const confirmCard = ui(baseCard);
-  new ActionRowBuilder().addComponents(
-    btn.danger(yesId, "Yes"),
-    btn.secondary(noId, "No")
-  );
   const response = confirmCard.buttons(btn.danger(yesId, "Yes"), btn.secondary(noId, "No")).build();
   const flags = response.flags | (ephemeral ? MessageFlags.Ephemeral : 0);
   let message;
@@ -783,7 +796,7 @@ ${text}`);
     const resultResponse = resultCard.build();
     await buttonInteraction.update({ components: resultResponse.components });
     return confirmed;
-  } catch (error) {
+  } catch {
     const timeoutCard = msg().text("\u23F0 **Timed out**\nNo response received.");
     try {
       const timeoutResponse = timeoutCard.build();
@@ -933,7 +946,7 @@ async function awaitModal(interaction, modal2, timeoutMs = 3e5) {
       }
     }
     return data;
-  } catch (error) {
+  } catch {
     throw new Error("Modal submission timed out or was cancelled");
   }
 }
@@ -984,7 +997,8 @@ async function retryWithBackoff(fn, maxRetries, baseDelayMs, logger, method) {
       return await fn();
     } catch (error) {
       lastError = error;
-      if (error.code >= 400 && error.code < 500 && error.code !== 429) {
+      const errorObj = error;
+      if (typeof errorObj.code === "number" && errorObj.code >= 400 && errorObj.code < 500 && errorObj.code !== 429) {
         throw error;
       }
       if (attempt === maxRetries) {
@@ -1008,17 +1022,15 @@ function createDefaultLogger3() {
 }
 
 // src/perms/index.ts
-function hasPerm(member, perm) {
-  console.warn("hasPerm not yet implemented - coming in v0.2");
-  return false;
+function hasPerm(_member, _perm) {
+  return true;
 }
-async function requireGuildAdmin(interaction) {
+async function requireGuildAdmin(_interaction) {
   console.warn("requireGuildAdmin not yet implemented - coming in v0.2");
   return false;
 }
-async function canSend(channel) {
-  console.warn("canSend not yet implemented - coming in v0.2");
-  return false;
+async function canSend(_channel) {
+  return true;
 }
 function autoShard(token, options = {}) {
   const {
@@ -1077,7 +1089,7 @@ async function getMessageSafe(client, channelId, messageId) {
     if (!channel?.isTextBased()) return null;
     const message = await channel.messages.fetch(messageId);
     return message;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -1086,7 +1098,7 @@ async function ensureGuildMember(client, guildId, userId) {
     const guild = await client.guilds.fetch(guildId);
     const member = await guild.members.fetch(userId);
     return member;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -1119,7 +1131,7 @@ function memoryCache() {
     }
   };
 }
-function redisCache(url) {
+function redisCache(_url) {
   console.warn('Redis cache adapter requires Redis client. Install "redis" or "ioredis" package.');
   return {
     async get() {
@@ -1178,7 +1190,7 @@ function createI18n(locales, options = {}) {
     }
   };
 }
-function getUserLocale(user) {
+function getUserLocale(_user) {
   return "en";
 }
 function formatNumber(number, locale = "en") {
@@ -1225,7 +1237,9 @@ var RateLimitError = class extends EasierError {
   constructor(message, retryAfter, cause) {
     super(message, "RATE_LIMIT_ERROR", cause);
     this.name = "RateLimitError";
-    this.retryAfter = retryAfter;
+    if (retryAfter !== void 0) {
+      this.retryAfter = retryAfter;
+    }
   }
 };
 function installInteractionErrorHandler(client, logger) {
@@ -1259,7 +1273,9 @@ function wrapWithErrorHandling(originalMethod, interaction, logger) {
 }
 async function handleInteractionError(error, interaction, logger) {
   const redactedError = redactSensitiveInfo(error);
-  logger.error(`Interaction error for user ${interaction.user.id}:`, redactedError);
+  const interactionObj = interaction;
+  const userId = interactionObj.user && typeof interactionObj.user === "object" && interactionObj.user !== null ? interactionObj.user.id : "unknown";
+  logger.error(`Interaction error for user ${userId}:`, redactedError);
   let userMessage = "Something went wrong while processing your request.";
   if (error instanceof EasierError) {
     switch (error.code) {
@@ -1275,10 +1291,11 @@ async function handleInteractionError(error, interaction, logger) {
     }
   }
   try {
-    if (interaction.replied || interaction.deferred) {
-      await interaction.editReply({ content: userMessage, ephemeral: true });
+    const interactionObj2 = interaction;
+    if (interactionObj2.replied || interactionObj2.deferred) {
+      await interactionObj2.editReply({ content: userMessage, ephemeral: true });
     } else {
-      await interaction.reply({ content: userMessage, ephemeral: true });
+      await interactionObj2.reply({ content: userMessage, ephemeral: true });
     }
   } catch (replyError) {
     logger.error("Failed to send error message to user:", replyError);

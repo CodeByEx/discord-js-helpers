@@ -1,4 +1,4 @@
-import { REST, Routes, Client, Message } from 'discord.js';
+import { REST, Routes, Client, Message, ChatInputCommandInteraction } from 'discord.js';
 import { readdir, stat } from 'fs/promises';
 import { join, extname } from 'path';
 import type { CommandDefinition, PrefixCommandDefinition, Logger } from '../types/index.js';
@@ -97,8 +97,8 @@ export async function loadCommandsAsync(
           // Look for default export or named exports that look like commands
           const possibleCommands = [
             module.default,
-            ...Object.values(module).filter((exp: any) => 
-              exp && typeof exp === 'object' && exp.data && exp.run
+            ...Object.values(module).filter((exp: unknown) =>
+              exp && typeof exp === 'object' && exp !== null && 'data' in (exp as Record<string, unknown>) && 'run' in (exp as Record<string, unknown>)
             )
           ].filter(Boolean);
           
@@ -183,7 +183,7 @@ export async function deploy(
       : Routes.applicationCommands(clientId);
 
     // Get existing commands for comparison
-    const existingCommands = await rest.get(route) as any[];
+    const existingCommands = await rest.get(route) as Record<string, unknown>[];
     
     // Show diff
     showCommandDiff(existingCommands, commandData, logger);
@@ -199,7 +199,7 @@ export async function deploy(
     }
     
     // Deploy commands
-    const deployedCommands = await rest.put(route, { body: commandData }) as any[];
+    const deployedCommands = await rest.put(route, { body: commandData }) as Record<string, unknown>[];
     
     logger.info(`✅ Successfully deployed ${deployedCommands.length} command(s)!`);
     
@@ -216,16 +216,16 @@ export async function deploy(
 /**
  * Shows a diff between existing and new commands
  */
-function showCommandDiff(existing: any[], newCommands: any[], logger: Logger): void {
-  const existingMap = new Map(existing.map(cmd => [cmd.name, cmd]));
-  const newMap = new Map(newCommands.map(cmd => [cmd.name, cmd]));
+function showCommandDiff(existing: unknown[], newCommands: unknown[], logger: Logger): void {
+  const existingMap = new Map(existing.map((cmd) => [(cmd as Record<string, unknown>).name as string, cmd]));
+  const newMap = new Map(newCommands.map((cmd) => [(cmd as Record<string, unknown>).name as string, cmd]));
   
-  const toAdd = newCommands.filter(cmd => !existingMap.has(cmd.name));
-  const toUpdate = newCommands.filter(cmd => {
-    const existingCmd = existingMap.get(cmd.name);
+  const toAdd = newCommands.filter((cmd) => !existingMap.has((cmd as Record<string, unknown>).name as string));
+  const toUpdate = newCommands.filter((cmd) => {
+    const existingCmd = existingMap.get((cmd as Record<string, unknown>).name as string);
     return existingCmd && !commandsEqual(existingCmd, cmd);
   });
-  const toRemove = existing.filter(cmd => !newMap.has(cmd.name));
+  const toRemove = existing.filter((cmd) => !newMap.has((cmd as Record<string, unknown>).name as string));
   
   if (toAdd.length === 0 && toUpdate.length === 0 && toRemove.length === 0) {
     logger.info('📋 No changes detected - commands are up to date');
@@ -236,28 +236,30 @@ function showCommandDiff(existing: any[], newCommands: any[], logger: Logger): v
   
   if (toAdd.length > 0) {
     logger.info(`  ➕ Adding ${toAdd.length} command(s):`);
-    toAdd.forEach(cmd => logger.info(`     - ${cmd.name}: ${cmd.description}`));
+    toAdd.forEach((cmd) => logger.info(`     - ${(cmd as Record<string, unknown>).name}: ${(cmd as Record<string, unknown>).description}`));
   }
   
   if (toUpdate.length > 0) {
     logger.info(`  📝 Updating ${toUpdate.length} command(s):`);
-    toUpdate.forEach(cmd => logger.info(`     - ${cmd.name}: ${cmd.description}`));
+    toUpdate.forEach((cmd) => logger.info(`     - ${(cmd as Record<string, unknown>).name}: ${(cmd as Record<string, unknown>).description}`));
   }
   
   if (toRemove.length > 0) {
     logger.info(`  ❌ Removing ${toRemove.length} command(s):`);
-    toRemove.forEach(cmd => logger.info(`     - ${cmd.name}: ${cmd.description}`));
+    toRemove.forEach((cmd) => logger.info(`     - ${(cmd as Record<string, unknown>).name}: ${(cmd as Record<string, unknown>).description}`));
   }
 }
 
 /**
  * Compares two command objects for equality (simplified)
  */
-function commandsEqual(cmd1: any, cmd2: any): boolean {
+function commandsEqual(cmd1: unknown, cmd2: unknown): boolean {
+  const c1 = cmd1 as Record<string, unknown>;
+  const c2 = cmd2 as Record<string, unknown>;
   return (
-    cmd1.name === cmd2.name &&
-    cmd1.description === cmd2.description &&
-    JSON.stringify(cmd1.options || []) === JSON.stringify(cmd2.options || [])
+    c1.name === c2.name &&
+    c1.description === c2.description &&
+    JSON.stringify(c1.options || []) === JSON.stringify(c2.options || [])
   );
 }
 
@@ -266,10 +268,10 @@ function commandsEqual(cmd1: any, cmd2: any): boolean {
  */
 function createDefaultLogger() {
   return {
-    debug: (message: string, ...args: any[]) => console.debug(`[DEBUG] ${message}`, ...args),
-    info: (message: string, ...args: any[]) => console.info(`[INFO] ${message}`, ...args),
-    warn: (message: string, ...args: any[]) => console.warn(`[WARN] ${message}`, ...args),
-    error: (message: string, ...args: any[]) => console.error(`[ERROR] ${message}`, ...args),
+    debug: (message: string, ...args: unknown[]) => console.debug(`[DEBUG] ${message}`, ...args),
+    info: (message: string, ...args: unknown[]) => console.info(`[INFO] ${message}`, ...args),
+    warn: (message: string, ...args: unknown[]) => console.warn(`[WARN] ${message}`, ...args),
+    error: (message: string, ...args: unknown[]) => console.error(`[ERROR] ${message}`, ...args),
   };
 }
 
@@ -294,7 +296,7 @@ function createDefaultLogger() {
 export function createCommandHandler(commands: CommandDefinition[], logger?: Logger) {
   const commandMap = new Map(commands.map(cmd => [cmd.data.name, cmd]));
   
-  return async (interaction: any) => {
+  return async (interaction: ChatInputCommandInteraction) => {
     if (!interaction.isChatInputCommand()) return;
     
     const command = commandMap.get(interaction.commandName);

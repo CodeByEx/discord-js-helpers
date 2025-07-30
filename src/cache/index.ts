@@ -1,5 +1,5 @@
 import type { CacheAdapter } from '../types/index.js';
-import type { Client, Message, GuildMember, TextChannel, Guild } from 'discord.js';
+import type { Client, Message, GuildMember } from 'discord.js';
 
 /**
  * Safely get a message without throwing on partials.
@@ -27,7 +27,7 @@ export async function getMessageSafe(client: Client, channelId: string, messageI
     
     const message = await channel.messages.fetch(messageId);
     return message;
-  } catch (error) {
+  } catch {
     // Message not found or not accessible
     return null;
   }
@@ -57,7 +57,7 @@ export async function ensureGuildMember(client: Client, guildId: string, userId:
     const guild = await client.guilds.fetch(guildId);
     const member = await guild.members.fetch(userId);
     return member;
-  } catch (error) {
+  } catch {
     // Member not found or not accessible
     return null;
   }
@@ -79,7 +79,7 @@ export async function ensureGuildMember(client: Client, guildId: string, userId:
  * ```
  */
 export function memoryCache(): CacheAdapter {
-  const store = new Map<string, { value: any; expires: number }>();
+  const store = new Map<string, { value: unknown; expires: number }>();
   
   // Cleanup expired entries every 5 minutes
   setInterval(() => {
@@ -130,7 +130,7 @@ export function memoryCache(): CacheAdapter {
  * await cache.set('session:123', { userId: '456' }, 1800); // 30 min TTL
  * ```
  */
-export function redisCache(url: string): CacheAdapter {
+export function redisCache(_url: string): CacheAdapter {
   // This would require a Redis client like 'redis' or 'ioredis'
   // For now, we'll provide a stub implementation
   console.warn('Redis cache adapter requires Redis client. Install "redis" or "ioredis" package.');

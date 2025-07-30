@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, MessageFlags } from 'discord.js';
+import { ActionRowBuilder, MessageFlags } from 'discord.js';
 
 /**
  * Legacy card builder for backward compatibility
@@ -31,28 +31,28 @@ class LegacyCardBuilder implements CardBuilder {
   private imageUrl?: string;
   private footerText?: string;
 
-  color(hex: number): this {
-    this.cardColor = hex;
+  color(_hex: number): this {
+    this.cardColor = _hex;
     return this;
   }
 
-  section(md: string): this {
-    this.sections.push(md);
+  section(_md: string): this {
+    this.sections.push(_md);
     return this;
   }
 
-  thumb(url: string): this {
-    this.thumbUrl = url;
+  thumb(_url: string): this {
+    this.thumbUrl = _url;
     return this;
   }
 
-  image(url: string): this {
-    this.imageUrl = url;
+  image(_url: string): this {
+    this.imageUrl = _url;
     return this;
   }
 
-  footer(md: string): this {
-    this.footerText = md;
+  footer(_md: string): this {
+    this.footerText = _md;
     return this;
   }
 

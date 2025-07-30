@@ -1,7 +1,6 @@
 import { 
   createClient, 
   deploy, 
-  msg, 
   embed, 
   btn, 
   createCommandHandler
@@ -42,7 +41,7 @@ const commands: CommandDefinition[] = [
 
       await interaction.reply({ 
         components: ui.components,
-        flags: ui.flags as any
+        flags: ui.flags as number
       });
     }
   },
@@ -72,7 +71,7 @@ const commands: CommandDefinition[] = [
       
       await interaction.editReply({ 
         components: ui.components,
-        flags: ui.flags as any
+        flags: ui.flags as number
       });
     }
   }
@@ -86,12 +85,12 @@ client.on('interactionCreate', async (interaction) => {
   if (!interaction.isButton()) return;
   
   switch (interaction.customId) {
-    case 'refresh_server':
-      await interaction.reply({ content: '🔄 Refreshed server info!', ephemeral: true });
-      break;
-    case 'more_info':
-      await interaction.reply({ content: 'ℹ️ More features coming soon!', ephemeral: true });
-      break;
+  case 'refresh_server':
+    await interaction.reply({ content: '🔄 Refreshed server info!', ephemeral: true });
+    break;
+  case 'more_info':
+    await interaction.reply({ content: 'ℹ️ More features coming soon!', ephemeral: true });
+    break;
   }
 });
 

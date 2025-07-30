@@ -1,9 +1,8 @@
 import { 
   ActionRowBuilder, 
   ButtonBuilder, 
-  ButtonStyle, 
+  ButtonStyle,
   MessageFlags,
-  ComponentType,
   APIMessageComponent,
   TextInputBuilder,
   TextInputStyle,
@@ -11,15 +10,12 @@ import {
   ModalBuilder,
   TextDisplayBuilder,
   ContainerBuilder,
-  SeparatorBuilder,
   ChannelSelectMenuBuilder,
   RoleSelectMenuBuilder,
   UserSelectMenuBuilder,
   MentionableSelectMenuBuilder,
   StringSelectMenuBuilder,
-  StringSelectMenuOptionBuilder,
-  MediaGalleryBuilder,
-  ThumbnailBuilder
+  StringSelectMenuOptionBuilder
 } from 'discord.js';
 
 export type Markdownish = string;
@@ -268,7 +264,7 @@ export interface SimpleEmbed {
  */
 export interface PaginationOptions {
   /** Array of items to paginate */
-  items: any[];
+  items: unknown[];
   /** Number of items per page */
   itemsPerPage: number;
   /** Current page number (defaults to 1) */
@@ -500,9 +496,10 @@ export function createPagination(options: PaginationOptions) {
   currentItems.forEach((item, index) => {
     if (typeof item === 'string') {
       message.text(item);
-    } else if (item.title && item.description) {
-      message.title(item.title);
-      message.text(item.description);
+    } else if (typeof item === 'object' && item !== null && 'title' in item && 'description' in item) {
+      const itemObj = item as Record<string, unknown>;
+      message.title(itemObj.title as string);
+      message.text(itemObj.description as string);
     } else {
       message.text(JSON.stringify(item));
     }
@@ -576,17 +573,17 @@ class SimpleMessageImpl implements SimpleMessage {
   }
 
   separator(): this {
-    this.textComponents.push("---");
+    this.textComponents.push('---');
     return this;
   }
 
   smallSeparator(): this {
-    this.textComponents.push("---");
+    this.textComponents.push('---');
     return this;
   }
 
   image(url: string, alt?: string): this {
-    this.textComponents.push(`![${alt || "Image"}](${url})`);
+    this.textComponents.push(`![${alt || 'Image'}](${url})`);
     return this;
   }
 
@@ -604,7 +601,7 @@ class SimpleMessageImpl implements SimpleMessage {
   }
 
   thumbnail(url: string, alt?: string): this {
-    this.textComponents.push(`![${alt || "Thumbnail"}](${url})`);
+    this.textComponents.push(`![${alt || 'Thumbnail'}](${url})`);
     return this;
   }
 
@@ -637,6 +634,7 @@ class SimpleMessageImpl implements SimpleMessage {
   }
 
   select(menu: SelectMenuBuilder | StringSelectMenuBuilder | UserSelectMenuBuilder | RoleSelectMenuBuilder | ChannelSelectMenuBuilder | MentionableSelectMenuBuilder): this {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const row = new ActionRowBuilder<any>();
     row.addComponents(menu);
     this.actionComponents.push(row.toJSON());
@@ -648,7 +646,7 @@ class SimpleMessageImpl implements SimpleMessage {
 
     // If no content was added, add a default text component
     if (!this.hasContent) {
-      this.textComponents.unshift(" ");
+      this.textComponents.unshift(' ');
     }
 
     // Create a container with all text content
@@ -736,6 +734,7 @@ class SimpleEmbedImpl implements SimpleEmbed {
   }
 
   select(menu: SelectMenuBuilder | StringSelectMenuBuilder | UserSelectMenuBuilder | RoleSelectMenuBuilder | ChannelSelectMenuBuilder | MentionableSelectMenuBuilder): this {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const row = new ActionRowBuilder<any>();
     row.addComponents(menu);
     this.actionComponents.push(row.toJSON());
@@ -994,43 +993,54 @@ export const select = {
  * @param embed - Discord.js EmbedBuilder to convert
  * @returns SimpleEmbed with equivalent content
  */
-export function convertEmbed(embed: any): SimpleEmbed {
-  const builder = embed();
+export function convertEmbed(embed: unknown): SimpleEmbed {
+  const embedObj = embed as Record<string, unknown>;
+  const builder = (embedObj as unknown as () => SimpleEmbed)();
   
   // Convert embed properties to embed format
-  if (embed.data?.color) {
-    builder.color(embed.data.color);
+  const data = embedObj.data as Record<string, unknown> | undefined;
+  if (data?.color) {
+    builder.color(data.color as number);
   }
   
-  if (embed.data?.title) {
-    builder.title(embed.data.title);
+  if (data?.title) {
+    builder.title(data.title as string);
   }
   
-  if (embed.data?.description) {
-    builder.description(embed.data.description);
+  if (data?.description) {
+    builder.description(data.description as string);
   }
   
   // Convert embed fields to embed fields
-  if (embed.data?.fields) {
-    for (const field of embed.data.fields) {
-      builder.field(field.name, field.value, field.inline);
+  if (data?.fields && Array.isArray(data.fields)) {
+    for (const field of data.fields as Array<Record<string, unknown>>) {
+      builder.field(field.name as string, field.value as string, field.inline as boolean);
     }
   }
   
-  if (embed.data?.thumbnail?.url) {
-    builder.thumbnail(embed.data.thumbnail.url);
+  if (data?.thumbnail && typeof data.thumbnail === 'object' && data.thumbnail !== null) {
+    const thumbnail = data.thumbnail as Record<string, unknown>;
+    if (thumbnail.url) {
+      builder.thumbnail(thumbnail.url as string);
+    }
   }
   
-  if (embed.data?.image?.url) {
-    builder.image(embed.data.image.url);
+  if (data?.image && typeof data.image === 'object' && data.image !== null) {
+    const image = data.image as Record<string, unknown>;
+    if (image.url) {
+      builder.image(image.url as string);
+    }
   }
   
-  if (embed.data?.footer?.text) {
-    builder.footer(embed.data.footer.text);
+  if (data?.footer && typeof data.footer === 'object' && data.footer !== null) {
+    const footer = data.footer as Record<string, unknown>;
+    if (footer.text) {
+      builder.footer(footer.text as string);
+    }
   }
   
-  if (embed.data?.timestamp) {
-    builder.timestamp(new Date(embed.data.timestamp));
+  if (data?.timestamp) {
+    builder.timestamp(new Date(data.timestamp as string | number));
   }
   
   return builder;
@@ -1048,7 +1058,7 @@ export function convertEmbed(embed: any): SimpleEmbed {
  * @param embeds - Array of EmbedBuilder instances
  * @returns Array of SimpleEmbed instances
  */
-export function migrateEmbeds(embeds: any[]): SimpleEmbed[] {
+export function migrateEmbeds(embeds: unknown[]): SimpleEmbed[] {
   return embeds.map(embed => convertEmbed(embed));
 }
 
@@ -1066,8 +1076,9 @@ export function migrateEmbeds(embeds: any[]): SimpleEmbed[] {
  * @param message - Discord message object
  * @returns True if message contains embeds that should be migrated
  */
-export function needsMigration(message: any): boolean {
-  return message.embeds && message.embeds.length > 0;
+export function needsMigration(message: unknown): boolean {
+  const messageObj = message as Record<string, unknown>;
+  return Array.isArray(messageObj.embeds) && messageObj.embeds.length > 0;
 }
 
 /**
@@ -1084,12 +1095,14 @@ export function needsMigration(message: any): boolean {
  * @param message - Discord message object with embeds
  * @returns Array of SimpleEmbed instances
  */
-export function migrateMessage(message: any): SimpleEmbed[] {
+export function migrateMessage(message: unknown): SimpleEmbed[] {
   if (!needsMigration(message)) {
     return [];
   }
   
-  return migrateEmbeds(message.embeds);
+  const messageObj = message as Record<string, unknown>;
+  const embeds = messageObj.embeds as Array<unknown>;
+  return migrateEmbeds(embeds);
 }
 
 // Legacy exports for backward compatibility

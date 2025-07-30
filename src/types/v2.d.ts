@@ -45,7 +45,7 @@ export interface FormField {
  */
 export interface PaginationOptions {
   /** Array of items to paginate */
-  items: any[];
+  items: unknown[];
   /** Number of items per page */
   itemsPerPage: number;
   /** Current page number (defaults to 1) */
@@ -398,7 +398,7 @@ export declare const btn: ButtonHelpers;
 export declare const select: SelectHelpers;
 
 // Migration function declarations
-export declare function convertEmbed(embed: any): SimpleEmbed;
-export declare function migrateEmbeds(embeds: any[]): SimpleEmbed[];
-export declare function needsMigration(message: any): boolean;
-export declare function migrateMessage(message: any): SimpleEmbed[]; 
+export declare function convertEmbed(embed: unknown): SimpleEmbed;
+export declare function migrateEmbeds(embeds: unknown[]): SimpleEmbed[];
+export declare function needsMigration(message: unknown): boolean;
+export declare function migrateMessage(message: unknown): SimpleEmbed[]; 

@@ -45,7 +45,9 @@ export class RateLimitError extends EasierError {
   constructor(message: string, retryAfter?: number, cause?: unknown) {
     super(message, 'RATE_LIMIT_ERROR', cause);
     this.name = 'RateLimitError';
-    (this as any).retryAfter = retryAfter;
+    if (retryAfter !== undefined) {
+      (this as { retryAfter?: number }).retryAfter = retryAfter;
+    }
   }
 }
 
@@ -101,8 +103,8 @@ export function installInteractionErrorHandler(client: Client, logger?: Logger):
 /**
  * Wraps an interaction method with error handling
  */
-function wrapWithErrorHandling(originalMethod: Function, interaction: any, logger: Logger) {
-  return async (...args: any[]) => {
+function wrapWithErrorHandling(originalMethod: Function, interaction: unknown, logger: Logger) {
+  return async (...args: unknown[]) => {
     try {
       return await originalMethod(...args);
     } catch (error) {
@@ -115,32 +117,37 @@ function wrapWithErrorHandling(originalMethod: Function, interaction: any, logge
 /**
  * Handles errors that occur during interaction processing
  */
-async function handleInteractionError(error: unknown, interaction: any, logger: Logger): Promise<void> {
+async function handleInteractionError(error: unknown, interaction: unknown, logger: Logger): Promise<void> {
   // Redact sensitive information from error logs
   const redactedError = redactSensitiveInfo(error);
-  logger.error(`Interaction error for user ${interaction.user.id}:`, redactedError);
+  const interactionObj = interaction as Record<string, unknown>;
+  const userId = interactionObj.user && typeof interactionObj.user === 'object' && interactionObj.user !== null
+    ? (interactionObj.user as Record<string, unknown>).id
+    : 'unknown';
+  logger.error(`Interaction error for user ${userId}:`, redactedError);
   
   let userMessage = 'Something went wrong while processing your request.';
   
   if (error instanceof EasierError) {
     switch (error.code) {
-      case 'PERMISSION_ERROR':
-        userMessage = 'You don\'t have permission to use this command.';
-        break;
-      case 'RATE_LIMIT_ERROR':
-        userMessage = 'You\'re doing that too fast. Please try again later.';
-        break;
-      case 'COMMAND_VALIDATION_ERROR':
-        userMessage = 'Invalid command input. Please check your parameters.';
-        break;
+    case 'PERMISSION_ERROR':
+      userMessage = 'You don\'t have permission to use this command.';
+      break;
+    case 'RATE_LIMIT_ERROR':
+      userMessage = 'You\'re doing that too fast. Please try again later.';
+      break;
+    case 'COMMAND_VALIDATION_ERROR':
+      userMessage = 'Invalid command input. Please check your parameters.';
+      break;
     }
   }
   
   try {
-    if (interaction.replied || interaction.deferred) {
-      await interaction.editReply({ content: userMessage, ephemeral: true });
+    const interactionObj = interaction as Record<string, unknown>;
+    if (interactionObj.replied || interactionObj.deferred) {
+      await (interactionObj.editReply as Function)({ content: userMessage, ephemeral: true });
     } else {
-      await interaction.reply({ content: userMessage, ephemeral: true });
+      await (interactionObj.reply as Function)({ content: userMessage, ephemeral: true });
     }
   } catch (replyError) {
     logger.error('Failed to send error message to user:', replyError);
@@ -204,7 +211,7 @@ export function createLogger(options: {
     return levels.indexOf(messageLevel) >= currentLevelIndex;
   };
   
-  const redactMessage = (message: string, ...args: any[]) => {
+  const redactMessage = (message: string, ...args: unknown[]) => {
     let redactedMessage = message;
     const redactedArgs = args.map(arg => {
       if (typeof arg === 'string') {
@@ -227,25 +234,25 @@ export function createLogger(options: {
   };
   
   return {
-    debug: (message: string, ...args: any[]) => {
+    debug: (message: string, ...args: unknown[]) => {
       if (shouldLog('debug')) {
         const { message: msg, args: redactedArgs } = redactMessage(message, ...args);
         console.debug(`[DEBUG] ${msg}`, ...redactedArgs);
       }
     },
-    info: (message: string, ...args: any[]) => {
+    info: (message: string, ...args: unknown[]) => {
       if (shouldLog('info')) {
         const { message: msg, args: redactedArgs } = redactMessage(message, ...args);
         console.info(`[INFO] ${msg}`, ...redactedArgs);
       }
     },
-    warn: (message: string, ...args: any[]) => {
+    warn: (message: string, ...args: unknown[]) => {
       if (shouldLog('warn')) {
         const { message: msg, args: redactedArgs } = redactMessage(message, ...args);
         console.warn(`[WARN] ${msg}`, ...redactedArgs);
       }
     },
-    error: (message: string, ...args: any[]) => {
+    error: (message: string, ...args: unknown[]) => {
       if (shouldLog('error')) {
         const { message: msg, args: redactedArgs } = redactMessage(message, ...args);
         console.error(`[ERROR] ${msg}`, ...redactedArgs);
@@ -259,9 +266,9 @@ export function createLogger(options: {
  */
 function createDefaultLogger(): Logger {
   return {
-    debug: (message: string, ...args: any[]) => console.debug(`[DEBUG] ${message}`, ...args),
-    info: (message: string, ...args: any[]) => console.info(`[INFO] ${message}`, ...args),
-    warn: (message: string, ...args: any[]) => console.warn(`[WARN] ${message}`, ...args),
-    error: (message: string, ...args: any[]) => console.error(`[ERROR] ${message}`, ...args),
+    debug: (message: string, ...args: unknown[]) => console.debug(`[DEBUG] ${message}`, ...args),
+    info: (message: string, ...args: unknown[]) => console.info(`[INFO] ${message}`, ...args),
+    warn: (message: string, ...args: unknown[]) => console.warn(`[WARN] ${message}`, ...args),
+    error: (message: string, ...args: unknown[]) => console.error(`[ERROR] ${message}`, ...args),
   };
 } 

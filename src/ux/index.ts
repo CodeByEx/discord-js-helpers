@@ -1,23 +1,17 @@
 import { 
   ActionRowBuilder, 
   ButtonBuilder, 
-  ButtonStyle, 
   ComponentType,
   MessageComponentInteraction,
   Message,
   MessageFlags,
-  InteractionResponse,
   ChatInputCommandInteraction,
   ButtonInteraction,
-  StringSelectMenuInteraction,
-  ModalSubmitInteraction,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle
 } from 'discord.js';
-import type { Interaction } from 'discord.js';
-import { msg, embed, btn } from '../v2/index.js';
-import type { SimpleMessage, SimpleEmbed } from '../v2/index.js';
+import { msg, btn } from '../v2/index.js';
 
 /**
  * Configuration options for confirm dialogs
@@ -32,7 +26,7 @@ export interface ConfirmOptions {
   /** Whether the response should be ephemeral */
   ephemeral?: boolean;
   /** Custom UI builder function */
-  ui?: (base: ReturnType<typeof msg>) => ReturnType<typeof msg>;
+  ui?: (_base: ReturnType<typeof msg>) => ReturnType<typeof msg>;
 }
 
 /**
@@ -46,7 +40,7 @@ export interface PaginateOptions {
   /** Whether the response should be ephemeral */
   ephemeral?: boolean;
   /** Custom render function for each page */
-  render?: (items: string[], page: number, totalPages: number) => ReturnType<typeof msg>;
+  render?: (_items: string[], _page: number, _totalPages: number) => ReturnType<typeof msg>;
 }
 
 /**
@@ -54,7 +48,7 @@ export interface PaginateOptions {
  */
 export interface CollectOptions {
   /** Filter function for interactions */
-  filter?: (i: MessageComponentInteraction) => boolean;
+  filter?: (_i: MessageComponentInteraction) => boolean;
   /** Collection timeout in milliseconds */
   time?: number;
   /** Maximum interactions to collect */
@@ -107,10 +101,10 @@ export async function confirm(
   const baseCard = msg().text(`⚠️ **Confirmation Required**\n\n${text}`);
   const confirmCard = ui(baseCard);
   
-  const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    btn.danger(yesId, 'Yes'),
-    btn.secondary(noId, 'No')
-  );
+  // const actionRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+  //   btn.danger(yesId, 'Yes'),
+  //   btn.secondary(noId, 'No')
+  // );
 
   const response = confirmCard.buttons(btn.danger(yesId, 'Yes'), btn.secondary(noId, 'No')).build();
   const flags = response.flags | (ephemeral ? MessageFlags.Ephemeral : 0);
@@ -146,7 +140,7 @@ export async function confirm(
     await buttonInteraction.update({ components: resultResponse.components });
     
     return confirmed;
-  } catch (error) {
+  } catch {
     // Timeout occurred
     const timeoutCard = msg().text('⏰ **Timed out**\nNo response received.');
     
@@ -208,14 +202,14 @@ export async function paginate(
     response.flags = response.flags | (ephemeral ? MessageFlags.Ephemeral : 0);
     
     const responseData = response;
-    await interaction.reply({ components: responseData.components, flags: responseData.flags as any });
+    await interaction.reply({ components: responseData.components, flags: responseData.flags as number });
     return;
   }
 
   const totalPages = Math.ceil(items.length / perPage);
   let currentPage = 0;
 
-  const updatePage = async (pageIndex: number, targetInteraction: any) => {
+  const updatePage = async (pageIndex: number, targetInteraction: { update?: Function; reply?: Function }) => {
     const startIndex = pageIndex * perPage;
     const endIndex = Math.min(startIndex + perPage, items.length);
     const pageItems = items.slice(startIndex, endIndex);
@@ -238,8 +232,8 @@ export async function paginate(
     response.flags = response.flags | (ephemeral ? MessageFlags.Ephemeral : 0);
     
     return await targetInteraction.update ? 
-      targetInteraction.update(response) : 
-      targetInteraction.reply({ ...response, fetchReply: true });
+      (targetInteraction.update as Function)(response) : 
+      (targetInteraction.reply as Function)({ ...response, fetchReply: true });
   };
 
   // Send initial page
@@ -261,18 +255,18 @@ export async function paginate(
 
   collector.on('collect', async (buttonInteraction: MessageComponentInteraction) => {
     switch (buttonInteraction.customId) {
-      case 'page_first':
-        currentPage = 0;
-        break;
-      case 'page_prev':
-        currentPage = Math.max(0, currentPage - 1);
-        break;
-      case 'page_next':
-        currentPage = Math.min(totalPages - 1, currentPage + 1);
-        break;
-      case 'page_last':
-        currentPage = totalPages - 1;
-        break;
+    case 'page_first':
+      currentPage = 0;
+      break;
+    case 'page_prev':
+      currentPage = Math.max(0, currentPage - 1);
+      break;
+    case 'page_next':
+      currentPage = Math.min(totalPages - 1, currentPage + 1);
+      break;
+    case 'page_last':
+      currentPage = totalPages - 1;
+      break;
     }
     
     await updatePage(currentPage, buttonInteraction);
@@ -472,7 +466,7 @@ export async function awaitModal(
     }
 
     return data;
-  } catch (error) {
+  } catch {
     throw new Error('Modal submission timed out or was cancelled');
   }
 } 
