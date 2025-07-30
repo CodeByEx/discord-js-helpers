@@ -103,12 +103,10 @@ export async function loadCommandsAsync(
           const fileUrl = pathToFileURL(filePath);
           const module = await import(fileUrl.href);
           
-          // Look for default export or named exports that look like commands
+          // Only load the default export as a command
+          // Named exports are typically helper functions and should not be treated as commands
           const possibleCommands = [
-            module.default,
-            ...Object.values(module).filter((exp: unknown) =>
-              exp && typeof exp === 'object' && exp !== null && 'data' in (exp as Record<string, unknown>) && 'run' in (exp as Record<string, unknown>)
-            )
+            module.default
           ].filter(Boolean);
           
           // Validate command structure

@@ -150,10 +150,7 @@ async function loadCommandsAsync(directory, logger) {
           const fileUrl = url.pathToFileURL(filePath);
           const module = await import(fileUrl.href);
           const possibleCommands = [
-            module.default,
-            ...Object.values(module).filter(
-              (exp) => exp && typeof exp === "object" && exp !== null && "data" in exp && "run" in exp
-            )
+            module.default
           ].filter(Boolean);
           const validCommands = possibleCommands.filter((cmd) => {
             const command = cmd;
